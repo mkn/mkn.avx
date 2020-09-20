@@ -1,0 +1,20 @@
+#! clean build test -O
+# -O >= 3 required for AVX
+
+name: mkn.avx
+parent: headers
+
+profile:
+- name: headers
+  inc: inc
+
+- name: test
+  parent: headers
+  main: test/test.cpp
+  mode: none
+
+- name: bench
+  parent: headers
+  dep: google.benchmark
+  main: test/bench.cpp
+  mode: none
