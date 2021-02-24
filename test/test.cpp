@@ -30,7 +30,7 @@ int main() noexcept {
     assert(v[3] == (2 * 2) + 3);
   };
 
-  check(std::fma(a[0](), a[1](), a[2]()));
+  check(std::fma(a[0], a[1], a[2]));
 
   return 0;
 }

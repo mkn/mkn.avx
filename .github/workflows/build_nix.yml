@@ -18,13 +18,13 @@ jobs:
         name: mkn
         branch: master
         workflow: build_nix.yml
-        repo: Dekken/maiken
+        repo: mkn/maiken
 
     - uses: allenevans/set-env@v1.0.0
-      with:
-        MKN_GCC_PREFERRED: 1
 
     - name: "Build/Test" # contains slash so use quotes otherwise UB
+      env:
+        MKN_GCC_PREFERRED: 1
       run: |
         chmod +x mkn
         KLOG=3 ./mkn clean build run -p test,bench -OtKda "-std=c++17 -fPIC" -l -pthread -g 0

@@ -34,7 +34,7 @@ void fma_double_avx_256(benchmark::State &state) {
   std::vector<AVX> a(SIZE, 1), b(SIZE, 2), c(SIZE, 3), d(SIZE);
 
   while (state.KeepRunning())
-    for (std::size_t i = 0; i < SIZE; i++) d[i] = std::fma(a[i](), b[i](), c[i]());
+    for (std::size_t i = 0; i < SIZE; i++) d[i] = std::fma(a[i], b[i], c[i]);
 
   for (std::size_t i = 0; i < SIZE * AVX::value_count; i++) assert(d[0][i] == 5);
 }
@@ -48,7 +48,7 @@ void fma_double_avx_128(benchmark::State &state) {
   std::vector<AVX> a(SIZE, 1), b(SIZE, 2), c(SIZE, 3), d(SIZE);
 
   while (state.KeepRunning())
-    for (std::size_t i = 0; i < SIZE; i++) d[i] = std::fma(a[i](), b[i](), c[i]());
+    for (std::size_t i = 0; i < SIZE; i++) d[i] = std::fma(a[i], b[i], c[i]);
 
   for (std::size_t i = 0; i < SIZE * AVX::value_count; i++) assert(d[0][i] == 5);
 }
@@ -75,7 +75,7 @@ void fma_float_avx_256(benchmark::State &state) {
   std::vector<AVX> a(SIZE, 1), b(SIZE, 2), c(SIZE, 3), d(SIZE);
 
   while (state.KeepRunning())
-    for (std::size_t i = 0; i < SIZE; i++) d[i] = std::fma(a[i](), b[i](), c[i]());
+    for (std::size_t i = 0; i < SIZE; i++) d[i] = std::fma(a[i], b[i], c[i]);
 
   for (std::size_t i = 0; i < SIZE * AVX::value_count; i++) assert(d[0][i] == 5);
 }
@@ -89,7 +89,7 @@ void fma_float_avx_128(benchmark::State &state) {
   std::vector<AVX> a(SIZE, 1), b(SIZE, 2), c(SIZE, 3), d(SIZE);
 
   while (state.KeepRunning())
-    for (std::size_t i = 0; i < SIZE; i++) d[i] = std::fma(a[i](), b[i](), c[i]());
+    for (std::size_t i = 0; i < SIZE; i++) d[i] = std::fma(a[i], b[i], c[i]);
 
   for (std::size_t i = 0; i < SIZE * AVX::value_count; i++) assert(d[0][i] == 5);
 }

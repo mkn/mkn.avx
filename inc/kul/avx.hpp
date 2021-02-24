@@ -47,12 +47,15 @@ auto& Type_set(Type& avx, typename Type::value_type val) noexcept {
   return avx.array;
 }
 
+template <typename T, std::size_t SIZE>
+struct alignas(16) TypeDAO {
+  static constexpr std::size_t value_count = SIZE;
+  using value_type = T;
+};
+
 template <>
-struct alignas(16) Type<double, 2> {
-  static constexpr std::size_t value_count = 2;
-  using value_type = double;
+struct alignas(16) Type<double, 2> : TypeDAO<double, 2> {
   using internal_type = __m128d;
-  using fma_array = internal_type[3];
   Type() noexcept = default;
   Type(value_type val) noexcept : array{Type_set(*this, val)} {}
   Type(internal_type&& arr) noexcept : array{arr} {}
@@ -64,11 +67,8 @@ struct alignas(16) Type<double, 2> {
 };
 
 template <>
-struct alignas(16) Type<double, 4> {
-  static constexpr std::size_t value_count = 4;
-  using value_type = double;
+struct alignas(16) Type<double, 4> : TypeDAO<double, 4> {
   using internal_type = __m256d;
-  using fma_array = internal_type[3];
   Type() noexcept = default;
   Type(value_type val) noexcept : array{Type_set(*this, val)} {}
   Type(internal_type&& arr) noexcept : array{arr} {}
@@ -80,11 +80,8 @@ struct alignas(16) Type<double, 4> {
 };
 
 template <>
-struct alignas(16) Type<float, 4> {
-  static constexpr std::size_t value_count = 4;
-  using value_type = float;
+struct alignas(16) Type<float, 4> : TypeDAO<float, 4> {
   using internal_type = __m128;
-  using fma_array = internal_type[3];
   Type() = default;
   Type(value_type val) noexcept : array{Type_set(*this, val)} {}
   Type(internal_type&& arr) noexcept : array{arr} {}
@@ -96,11 +93,8 @@ struct alignas(16) Type<float, 4> {
 };
 
 template <>
-struct alignas(16) Type<float, 8> {
-  static constexpr std::size_t value_count = 8;
-  using value_type = float;
+struct alignas(16) Type<float, 8> : TypeDAO<float, 8> {
   using internal_type = __m256;
-  using fma_array = internal_type[3];
   Type() noexcept = default;
   Type(value_type val) noexcept : array{Type_set(*this, val)} {}
   Type(internal_type&& arr) noexcept : array{arr} {}
@@ -114,18 +108,18 @@ struct alignas(16) Type<float, 8> {
 } /* namespace kul::avx */
 
 namespace std {
-inline auto fma(__m128 const& a, __m128 const& b, __m128 const& c) noexcept {
-  return _mm_fmadd_ps(a, b, c);
+inline auto fma(kul::avx::Type<float, 4> const& a, kul::avx::Type<float, 4> const& b, kul::avx::Type<float, 4> const& c) noexcept {
+  return kul::avx::Type<float, 4>{_mm_fmadd_ps(a(), b(), c())};
 }
-inline auto fma(__m256 const& a, __m256 const& b, __m256 const& c) noexcept {
-  return _mm256_fmadd_ps(a, b, c);
+inline auto fma(kul::avx::Type<float, 8> const& a, kul::avx::Type<float, 8> const& b, kul::avx::Type<float, 8> const& c) noexcept {
+  return kul::avx::Type<float, 8>{_mm256_fmadd_ps(a(), b(), c())};
 }
 
-inline auto fma(__m256d const& a, __m256d const& b, __m256d const& c) noexcept {
-  return _mm256_fmadd_pd(a, b, c);
+inline auto fma(kul::avx::Type<double, 2> const& a, kul::avx::Type<double, 2> const& b, kul::avx::Type<double, 2> const& c) noexcept {
+  return kul::avx::Type<double, 2>{_mm_fmadd_pd(a(), b(), c())};
 }
-inline auto fma(__m128d const& a, __m128d const& b, __m128d const& c) {
-  return _mm_fmadd_pd(a, b, c);
+inline auto fma(kul::avx::Type<double, 4> const& a, kul::avx::Type<double, 4> const& b, kul::avx::Type<double, 4> const& c) noexcept {
+  return kul::avx::Type<double, 4>{_mm256_fmadd_pd(a(), b(), c())};
 }
 
 } /* namespace std */
