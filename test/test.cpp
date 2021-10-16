@@ -1,5 +1,5 @@
 
-#include "kul/avx.hpp"
+#include "mkn/avx.hpp"
 
 #include <array>
 #include <vector>
@@ -9,7 +9,7 @@
 int main() noexcept {
   std::cout << __FILE__ << std::endl;
 
-  using AVX = kul::avx::Type<double, 4>;
+  using AVX = mkn::avx::Type<double, 4>;
   static constexpr std::size_t SIZE = AVX::value_count * 3;
   static_assert((SIZE % AVX::value_count) == 0, "Bad AVX value_count for vector");
 
@@ -30,7 +30,7 @@ int main() noexcept {
     assert(v[3] == (2 * 2) + 3);
   };
 
-  check(std::fma(a[0](), a[1](), a[2]()));
+  check(std::fma(a[0], a[1], a[2]));
 
   return 0;
 }
