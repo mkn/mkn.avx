@@ -28,14 +28,51 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-#ifndef _MKN_AVX_HPP_
-#define _MKN_AVX_HPP_
+#ifndef _MKN_AVX_DEF_HPP_
+#define _MKN_AVX_DEF_HPP_
+
+
+#include <cassert>
+#include <cstdint>
+#include <immintrin.h> // avx
+
+
+// #define __MMX_WITH_SSE__ 1
+// #define __SSE2_MATH__ 1
+// #define __SSE__ 1
+// #define __SSE2__ 1
+// #define __SSE_MATH__ 1
+
+
+#if !defined(__AVX__)
+#pragma message("__AVX__ not defined")
+#define __AVX__ 0
+#endif
+
+
+#if !defined(__AVX2__)
+#pragma message("__AVX2__ not defined")
+#define __AVX2__ 0
+#endif
 
 
 
-#include "mkn/avx/def.hpp"
-#include "mkn/avx/types.hpp"
+namespace mkn::avx
+{
+struct Options
+{
+    bool static constexpr AVX  = __AVX__;
+    bool static constexpr AVX2 = __AVX2__;
+
+    template<typename T, std::uint16_t operands = 2>
+    auto static constexpr N()
+    {
+        if constexpr (AVX2)
+            return 256 / 8 / sizeof(T) / operands;
+    }
+};
 
 
+} /* namespace mkn::avx */
 
-#endif /* _MKN_AVX_HPP_ */
+#endif /* _MKN_AVX_DEF_HPP_ */

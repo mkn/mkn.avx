@@ -1,4 +1,4 @@
-#! clean build test -O
+#! clean build test -dtKOp test,bench -l -pthread run
 # -O >= 3 required for AVX
 
 name: mkn.avx

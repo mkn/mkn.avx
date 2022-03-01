@@ -1,9 +1,14 @@
 
-#include <cassert>
-#include "benchmark/benchmark.h"
-#include "mkn/avx.hpp"
-
 #include <cmath>
+#include <array>
+#include <cassert>
+
+#include "mkn/kul/log.hpp"
+
+#include "mkn/avx.hpp"
+#include "mkn/avx/vector.hpp"
+
+#include "benchmark/benchmark.h"
 
 namespace mkn::noavx
 {
@@ -11,21 +16,18 @@ template<uint8_t Max, typename Float>
 void __attribute__((optimize("no-tree-vectorize")))
 add(Float const* a, Float const* b, Float* c) noexcept
 {
-    // for (uint8_t i = 0; i < Max; i++)
     c[0] = a[0] + b[0];
 }
 template<uint8_t Max, typename Float>
 void __attribute__((optimize("no-tree-vectorize")))
 mul(Float const* a, Float const* b, Float* c) noexcept
 {
-    // for (uint8_t i = 0; i < Max; i++)
     c[0] = a[0] * b[0];
 }
 template<uint8_t Max, typename Float>
 void __attribute__((optimize("no-tree-vectorize")))
 multiply_and_add(Float const* a, Float const* b, Float const* c, Float* d) noexcept
 {
-    // for (uint8_t i = 0; i < Max; i++)
     d[0] = (a[0] * b[0]) + c[0];
 }
 } /* namespace mkn::noavx */
@@ -107,16 +109,63 @@ void mul_double_avx_128_inplace(benchmark::State& state)
     using AVX                       = mkn::avx::Type<double, AVX_COUNT>;
     constexpr std::size_t SIZE      = 1e6 / AVX::value_count;
 
-    std::vector<AVX> a(SIZE, 1), b(SIZE, 1);
+    std::vector<AVX> a(SIZE, 2), b(SIZE, 2);
 
     while (state.KeepRunning())
         for (std::size_t i = 0; i < SIZE; i++)
             a[i] *= b[i];
 
-    for (std::size_t i = 0; i < SIZE * AVX::value_count; ++i)
-        assert(a[0][i] == 1);
+    // for (std::size_t i = 0; i < SIZE * AVX::value_count; ++i)
+    //     assert(a[0][i] == 1);
 }
 BENCHMARK(mul_double_avx_128_inplace)->Unit(benchmark::kMicrosecond);
+
+
+
+
+void mul_double_avx_vec_inplace(benchmark::State& state)
+{
+    std::size_t constexpr SIZE = 1e6;
+    mkn::avx::Vector<double> a(SIZE, 2), b(SIZE, 2);
+    for (auto _ : state)
+        a *= b;
+}
+BENCHMARK(mul_double_avx_vec_inplace)->Unit(benchmark::kMicrosecond);
+
+
+void mul_double_avx_vec(benchmark::State& state)
+{
+    std::size_t constexpr SIZE = 1e6;
+    mkn::avx::Vector<double> a(SIZE, 2), b(SIZE, 2), c(SIZE);
+    for (auto _ : state) c.mul(a, b);
+}
+BENCHMARK(mul_double_avx_vec)->Unit(benchmark::kMicrosecond);
+
+
+
+
+void mul_float_avx_vec_inplace(benchmark::State& state)
+{
+    std::size_t constexpr SIZE = 1e6;
+    mkn::avx::Vector<float> a(SIZE, 2), b(SIZE, 2);
+    for (auto _ : state)
+        a *= b;
+}
+BENCHMARK(mul_float_avx_vec_inplace)->Unit(benchmark::kMicrosecond);
+
+
+
+void mul_std_int32_t_avx_vec_inplace(benchmark::State& state)
+{
+    std::size_t constexpr SIZE = 1e6;
+    mkn::avx::Vector<std::int32_t> a(SIZE, 2), b(SIZE, 2);
+    for (auto _ : state)
+        a *= b;
+}
+BENCHMARK(mul_std_int32_t_avx_vec_inplace)->Unit(benchmark::kMicrosecond);
+
+
+
 
 void add_double(benchmark::State& state)
 {
@@ -182,6 +231,51 @@ void add_double_avx_128_inplace(benchmark::State& state)
         assert(int(a[0][i] + 1) % 2 == 0);
 }
 BENCHMARK(add_double_avx_128_inplace)->Unit(benchmark::kMicrosecond);
+
+
+
+void add_double_avx_vec_inplace(benchmark::State& state)
+{
+    std::size_t constexpr SIZE = 1e6;
+    mkn::avx::Vector<double> a(SIZE, 2), b(SIZE, 2);
+    for (auto _ : state)
+        a += b;
+}
+BENCHMARK(add_double_avx_vec_inplace)->Unit(benchmark::kMicrosecond);
+
+
+void add_double_avx_vec(benchmark::State& state)
+{
+    std::size_t constexpr SIZE = 1e6;
+    mkn::avx::Vector<double> a(SIZE, 2), b(SIZE, 2), c(SIZE);
+    for (auto _ : state) c.add(a, b);
+}
+BENCHMARK(add_double_avx_vec)->Unit(benchmark::kMicrosecond);
+
+
+
+
+void add_float_avx_vec_inplace(benchmark::State& state)
+{
+    std::size_t constexpr SIZE = 1e6;
+    mkn::avx::Vector<float> a(SIZE, 2), b(SIZE, 2);
+    for (auto _ : state)
+        a *= b;
+}
+BENCHMARK(add_float_avx_vec_inplace)->Unit(benchmark::kMicrosecond);
+
+
+void add_std_int32_t_avx_vec_inplace(benchmark::State& state)
+{
+    std::size_t constexpr SIZE = 1e6;
+    mkn::avx::Vector<std::int32_t> a(SIZE, 2), b(SIZE, 2);
+    for (auto _ : state)
+        a += b;
+}
+BENCHMARK(add_std_int32_t_avx_vec_inplace)->Unit(benchmark::kMicrosecond);
+
+
+
 
 void fma_double(benchmark::State& state)
 {

@@ -8,24 +8,48 @@
 #include <cassert>
 #include <iostream>
 
+
+template<typename T>
 void vec()
 {
-    mkn::avx::Vector<double> a(101, 2), b(101, 3);
+    mkn::avx::Vector<T> a(103, 2), b(103, 3);
+
     a += b;
     a *= b;
-    assert(a.data()[00] == 15);
-    assert(a.data()[99] == 15);
-    assert(a.data()[100] == 15);
+
+    for (std::size_t i = 0; i < a.size(); ++i)
+    {
+        assert(a[i] == 15);
+    }
 }
 
-void fma(){
+template<typename T>
+void span()
+{
+    std::vector<T> v0(103, 2), v1(103, 3);
+    mkn::avx::Span<T> a(v0), b(v1);
+
+    a += b;
+    a *= b;
+
+    for (std::size_t i = 0; i < a.size(); ++i)
+    {
+        assert(a[i] == 15);
+    }
+}
+
+
+void fma()
+{
     using AVX                         = mkn::avx::Type<double, 4>;
     static constexpr std::size_t SIZE = AVX::value_count * 3;
     static_assert((SIZE % AVX::value_count) == 0, "Bad AVX value_count for vector");
 
     std::vector<AVX> a(SIZE / AVX::value_count, 1);
     for (size_t i = 0; i < SIZE; i++)
+    {
         assert(a[0][i] == 1); // dangeresque
+    }
 
     a[1][0] = 2;
     a[2][0] = 3;
@@ -48,8 +72,13 @@ int main() noexcept
 {
     std::cout << __FILE__ << std::endl;
 
+    vec<float>();
+    vec<double>();
+
+    span<float>();
+    span<double>();
+
     fma();
-    vec();
 
     return 0;
 }

@@ -31,30 +31,56 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MKN_AVX_SPAN_HPP_
 #define _MKN_AVX_SPAN_HPP_
 
-#include "mkn/avx.hpp"
+
+#include <array>
 #include <vector>
 #include <cassert>
 #include <cstdint>
 
 #include "mkn/kul/span.hpp"
 
+#include "mkn/avx/def.hpp"
+#include "mkn/avx/types.hpp"
+
 
 namespace mkn::avx
 {
-auto constexpr _deduce_N_for_span(){
-    // TODO - figure out at compile time the best available instructions
-    return 2;
-}
-
-template<typename T, std::size_t AVX_N = _deduce_N_for_span()>
+template<typename T>
 class Span
 {
 public:
-    using AVX_t                 = mkn::avx::Type<T, AVX_N>;
+    auto constexpr static N = Options::N<T>();
+
+    using AVX_t = mkn::avx::Type<T, N>;
 
     Span(T* d, std::size_t s)
         : span{d, s}
     {
+    }
+
+    Span(std::vector<T>& v)
+        : span{v.data(), v.size()}
+    {
+    }
+
+    void add(Span const& a, Span const& b){
+        auto& v0 = *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&this->span);
+        auto& v1 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&a.span);
+        auto& v2 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&b.span);
+        for (std::size_t i = 0; i < size() / N; ++i)
+            v0[i] = v1[i] + v1[i];
+        for (std::size_t i = size() - size() % N; i < size(); ++i)
+            span[i] = a.span[i] + b.span[i];
+    }
+
+    void mul(Span const& a, Span const& b){
+        auto& v0 = *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&this->span);
+        auto& v1 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&a.span);
+        auto& v2 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&b.span);
+        for (std::size_t i = 0; i < size() / N; ++i)
+            v0[i] = v1[i] * v1[i];
+        for (std::size_t i = size() - size() % N; i < size(); ++i)
+            span[i] = a.span[i] * b.span[i];
     }
 
     void operator+=(Span const& that)
@@ -63,41 +89,45 @@ public:
 
         auto& v0 = *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&this->span);
         auto& v1 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&that.span);
-        for (std::size_t i = 0; i < size() / AVX_N; ++i)
+        for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] += v1[i];
-        if (size() % AVX_N > 0)
-            span[size() - 1] += that.span[size() - 1];
+        for (std::size_t i = size() - size() % N; i < size(); ++i)
+            span[i] += that.span[i];
     }
+
     void operator*=(Span const& that)
     {
         assert(this->size() >= that.size());
 
         auto& v0 = *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&this->span);
         auto& v1 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&that.span);
-        for (std::size_t i = 0; i < size() / AVX_N; ++i)
+        for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] *= v1[i];
-        if (size() % AVX_N > 0)
-            span[size() - 1] *= that.span[size() - 1];
+        for (std::size_t i = size() - size() % N; i < size(); ++i)
+            span[i] *= that.span[i];
     }
 
     auto& size() const { return span.size(); }
-    auto& data() const { return span.data(); }
-    auto* data() { return span.data(); }
+    auto data() const { return span.data(); }
+    auto data() { return span.data(); }
 
     auto& operator[](std::size_t i) const { return span[i]; }
     auto& operator[](std::size_t i) { return span[i]; }
+
+    auto& operator()() { return span; }
+    auto& operator()() const { return span; }
 
 private:
     template<typename T0>
     auto& cast_to_AVX(T0 t)
     {
-        return *reinterpret_cast<mkn::avx::Type<T, AVX_N>*>(cast_to_N(t));
+        return *reinterpret_cast<mkn::avx::Type<T, N>*>(cast_to_N(t));
     }
 
     template<typename T0>
     auto cast_to_N(T0 t)
     {
-        return reinterpret_cast<std::array<T, AVX_N>*>(t);
+        return reinterpret_cast<std::array<T, N>*>(t);
     }
 
     mkn::kul::Span<T> span;
