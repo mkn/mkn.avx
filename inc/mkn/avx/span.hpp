@@ -63,7 +63,8 @@ public:
     {
     }
 
-    void add(Span const& a, Span const& b){
+    void add(Span const& a, Span const& b)
+    {
         auto& v0 = *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&this->span);
         auto& v1 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&a.span);
         auto& v2 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&b.span);
@@ -73,7 +74,8 @@ public:
             span[i] = a.span[i] + b.span[i];
     }
 
-    void mul(Span const& a, Span const& b){
+    void mul(Span const& a, Span const& b)
+    {
         auto& v0 = *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&this->span);
         auto& v1 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&a.span);
         auto& v2 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&b.span);

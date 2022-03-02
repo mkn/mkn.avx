@@ -31,6 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MKN_AVX_TYPES_HPP_
 #define _MKN_AVX_TYPES_HPP_
 
+#include <utility>
 
 #include "mkn/avx/def.hpp"
 

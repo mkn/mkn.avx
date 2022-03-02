@@ -31,11 +31,36 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MKN_AVX_HPP_
 #define _MKN_AVX_HPP_
 
-
-
 #include "mkn/avx/def.hpp"
 #include "mkn/avx/types.hpp"
+#include "mkn/avx/span.hpp"
+#include "mkn/avx/vector.hpp"
 
+
+
+#if 0 // sample code
+
+#include "mkn/avx.hpp"
+#include "mkn/kul/log.hpp"
+#include <cstdlib> // for abort
+
+int main(){
+
+    std::size_t constexpr SIZE = 1e6;
+
+    mkn::avx::Vector<float> a(SIZE, 1), b(SIZE, 2);
+
+    a += b;
+
+    for(std::size_t i = 0; i < SIZE; ++i)
+        if(a[i] != 3) std::abort();
+
+    KOUT(NON) << __FILE__;
+    return 0;
+}
+
+
+#endif
 
 
 #endif /* _MKN_AVX_HPP_ */
