@@ -70,7 +70,7 @@ public:
     }
 
 
-    auto operator+(This const& that)
+    auto operator+(This const& that) noexcept
     {
         using AVX_t = typename Span<T>::AVX_t;
 
@@ -91,7 +91,7 @@ public:
         return r;
     }
 
-    auto operator*(This const& that)
+    auto operator*(This const& that) noexcept
     {
         using AVX_t = typename Span<T>::AVX_t;
 

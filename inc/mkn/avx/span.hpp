@@ -63,7 +63,7 @@ public:
     {
     }
 
-    void add(Span const& a, Span const& b)
+    void add(Span const& a, Span const& b) noexcept
     {
         auto& v0 = *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&this->span);
         auto& v1 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&a.span);
@@ -74,18 +74,22 @@ public:
             span[i] = a.span[i] + b.span[i];
     }
 
-    void mul(Span const& a, Span const& b)
+    void mul(Span const& a, Span const& b) noexcept
     {
+        static_assert(sizeof(mkn::kul::Span<AVX_t>) == sizeof(mkn::kul::Span<T>));
+
         auto& v0 = *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&this->span);
         auto& v1 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&a.span);
         auto& v2 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&b.span);
+
+        assert(v0.size() == v1.size() and v1.size() == v2.size());
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] = v1[i] * v1[i];
         for (std::size_t i = size() - size() % N; i < size(); ++i)
             span[i] = a.span[i] * b.span[i];
     }
 
-    void operator+=(Span const& that)
+    void operator+=(Span const& that) noexcept
     {
         assert(this->size() >= that.size());
 
@@ -97,9 +101,11 @@ public:
             span[i] += that.span[i];
     }
 
-    void operator*=(Span const& that)
+    void operator*=(Span const& that) noexcept
     {
         assert(this->size() >= that.size());
+
+        static_assert(sizeof(mkn::kul::Span<AVX_t>) == sizeof(mkn::kul::Span<T>));
 
         auto& v0 = *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&this->span);
         auto& v1 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&that.span);

@@ -39,9 +39,10 @@ void span()
 }
 
 
+template<typename T = double>
 void fma()
 {
-    using AVX                         = mkn::avx::Type<double, 4>;
+    using AVX                         = mkn::avx::Type<T, 4>;
     static constexpr std::size_t SIZE = AVX::value_count * 3;
     static_assert((SIZE % AVX::value_count) == 0, "Bad AVX value_count for vector");
 
@@ -78,7 +79,7 @@ int main() noexcept
     span<float>();
     span<double>();
 
-    fma();
+    // fma();
 
     return 0;
 }

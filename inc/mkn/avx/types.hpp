@@ -53,7 +53,7 @@ auto& Type_set(Type& avx, typename Type::value_type val) noexcept
 }
 
 template<typename T, std::size_t SIZE, typename Impl>
-struct alignas(16) TypeDAO
+struct TypeDAO
 {
     static constexpr std::size_t value_count = SIZE;
     using value_type                         = T;
@@ -69,7 +69,7 @@ struct alignas(16) TypeDAO
     {
     }
 
-    auto& operator[](std::size_t i) noexcept { return array[i]; }
+    auto& operator[](std::size_t i) noexcept { return reinterpret_cast<T*>(&array)[i]; }
     auto& operator[](std::size_t i) const noexcept { return array[i]; }
     auto& operator()() noexcept { return array; }
     auto& operator()() const noexcept { return array; }
@@ -80,7 +80,7 @@ struct alignas(16) TypeDAO
 
 //////////////////// double ////////////////////
 template<>
-struct alignas(16) Type_<double, 2>
+struct Type_<double, 2>
 {
     using internal_type                = __m128d;
     auto constexpr static add_func_ptr = &_mm_add_pd;
@@ -89,7 +89,7 @@ struct alignas(16) Type_<double, 2>
 };
 
 template<>
-struct alignas(16) Type_<double, 4>
+struct Type_<double, 4>
 {
     using internal_type                = __m256d;
     auto constexpr static add_func_ptr = &_mm256_add_pd;
@@ -103,7 +103,7 @@ struct alignas(16) Type_<double, 4>
 
 //////////////////// float ////////////////////
 template<>
-struct alignas(16) Type_<float, 4>
+struct Type_<float, 4>
 {
     using internal_type                = __m128;
     auto constexpr static add_func_ptr = &_mm_add_ps;
@@ -112,7 +112,7 @@ struct alignas(16) Type_<float, 4>
 };
 
 template<>
-struct alignas(16) Type_<float, 8>
+struct Type_<float, 8>
 {
     using internal_type                = __m256;
     auto constexpr static add_func_ptr = &_mm256_add_ps;
@@ -126,7 +126,7 @@ struct alignas(16) Type_<float, 8>
 
 //////////////////// std::int16_t ////////////////////
 template<>
-struct alignas(16) Type_<std::int16_t, 4>
+struct Type_<std::int16_t, 4>
 {
     using internal_type                = __m128i;
     auto constexpr static add_func_ptr = &_mm_add_epi16;
@@ -134,7 +134,7 @@ struct alignas(16) Type_<std::int16_t, 4>
     // auto constexpr static fma_func_ptr = &_mm256_fmadd_ps;
 };
 template<>
-struct alignas(16) Type_<std::int16_t, 8>
+struct Type_<std::int16_t, 8>
 {
     using internal_type                = __m256i;
     auto constexpr static add_func_ptr = &_mm256_add_epi16;
@@ -148,7 +148,7 @@ struct alignas(16) Type_<std::int16_t, 8>
 
 //////////////////// std::int32_t ////////////////////
 template<>
-struct alignas(16) Type_<std::int32_t, 4>
+struct Type_<std::int32_t, 4>
 {
     using internal_type                = __m128i;
     auto constexpr static add_func_ptr = &_mm_add_epi32;
@@ -156,7 +156,7 @@ struct alignas(16) Type_<std::int32_t, 4>
     // auto constexpr static fma_func_ptr = &_mm256_fmadd_ps;
 };
 template<>
-struct alignas(16) Type_<std::int32_t, 8>
+struct Type_<std::int32_t, 8>
 {
     using internal_type                = __m256i;
     auto constexpr static add_func_ptr = &_mm256_add_epi32;
@@ -169,7 +169,7 @@ struct alignas(16) Type_<std::int32_t, 8>
 
 // //////////////////// std::uint32_t ////////////////////
 // template<>
-// struct alignas(16) Type_<std::uint32_t, 8>
+// struct  Type_<std::uint32_t, 8>
 // {
 //     using internal_type                = __m256;
 //     auto constexpr static add_func_ptr = &_mm256_add_epu32;
@@ -179,7 +179,7 @@ struct alignas(16) Type_<std::int32_t, 8>
 // //////////////////// std::int32_t ////////////////////
 // //////////////////// std::uint64_t ////////////////////
 // template<>
-// struct alignas(16) Type_<std::int64_t, 4>
+// struct  Type_<std::int64_t, 4>
 // {
 //     using internal_type                = __m256;
 //     auto constexpr static add_func_ptr = &_mm256_add_epi64;
@@ -197,7 +197,7 @@ struct Type : public TypeDAO<T, SIZE, Type_<T, SIZE>>
     using array_t                      = typename DAO::array_t;
     auto constexpr static add_func_ptr = Type_<T, SIZE>::add_func_ptr;
     auto constexpr static mul_func_ptr = Type_<T, SIZE>::mul_func_ptr;
-    auto constexpr static fma_func_ptr = Type_<T, SIZE>::fma_func_ptr;
+    // auto constexpr static fma_func_ptr = Type_<T, SIZE>::fma_func_ptr;
 
     Type() noexcept = default;
     Type(typename DAO::value_type val) noexcept
@@ -211,31 +211,31 @@ struct Type : public TypeDAO<T, SIZE, Type_<T, SIZE>>
 };
 
 template<typename AVX_t>
-AVX_t fma(AVX_t const& a, AVX_t const& b, AVX_t const& c)
+AVX_t fma(AVX_t const& a, AVX_t const& b, AVX_t const& c) noexcept
 {
     return {AVX_t::fma_func_ptr(a(), b(), c())};
 }
 
 template<typename T, std::size_t SIZE>
-Type<T, SIZE> operator*(Type<T, SIZE> const& a, Type<T, SIZE> const& b)
+Type<T, SIZE> operator*(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
 {
     return {Type<T, SIZE>::mul_func_ptr(a(), b())};
 }
 
 template<typename T, std::size_t SIZE>
-Type<T, SIZE> operator+(Type<T, SIZE> const& a, Type<T, SIZE> const& b)
+Type<T, SIZE> operator+(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
 {
     return {Type<T, SIZE>::add_func_ptr(a(), b())};
 }
 
 template<typename T, std::size_t SIZE>
-void operator+=(Type<T, SIZE>& a, Type<T, SIZE> const& b)
+void operator+=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
 {
     a() = Type<T, SIZE>::add_func_ptr(a(), b());
 }
 
 template<typename T, std::size_t SIZE>
-void operator*=(Type<T, SIZE>& a, Type<T, SIZE> const& b)
+void operator*=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
 {
     a() = Type<T, SIZE>::mul_func_ptr(a(), b());
 }
