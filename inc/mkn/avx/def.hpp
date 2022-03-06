@@ -69,6 +69,8 @@ struct Options
     {
         if constexpr (AVX2)
             return 256 / 8 / sizeof(T) / operands;
+        else
+            return 1;
     }
 };
 

@@ -57,7 +57,7 @@ void inline NO_VECTORIZE mul_inplace(Float* a, Float const* b) noexcept
 
 template<std::uint64_t SIZE, typename Float>
 void inline NO_VECTORIZE multiply_and_add(Float const* a, Float const* b, Float const* c,
-                                            Float* d) noexcept
+                                          Float* d) noexcept
 {
     d[0] = (a[0] * b[0]) + c[0];
 }

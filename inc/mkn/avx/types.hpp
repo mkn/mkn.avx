@@ -41,7 +41,11 @@ namespace mkn::avx
 template<typename T, std::size_t SIZE>
 struct Type_
 {
-    Type_() = delete; // generic class never to be instantiated.
+    using internal_type = T;
+
+    // default operations without avx
+    auto constexpr static add_func_ptr = [](auto& a, auto& b) { return a + b; };
+    auto constexpr static mul_func_ptr = [](auto& a, auto& b) { return a * b; };
 };
 
 template<typename Type>
@@ -60,6 +64,9 @@ struct TypeDAO
     using array_t                            = typename Impl::internal_type;
 
     TypeDAO() noexcept = default;
+
+
+    template<typename Y = T, typename = std::enable_if_t<!std::is_same_v<Y, array_t>>>
     TypeDAO(value_type val) noexcept
         : array{Type_set(*this, val)}
     {
@@ -191,21 +198,30 @@ struct Type_<std::int32_t, 8>
 
 
 template<typename T, std::size_t SIZE>
-struct Type : public TypeDAO<T, SIZE, Type_<T, SIZE>>
+using SuperType = TypeDAO<T, SIZE, Type_<T, SIZE>>;
+
+template<typename T, std::size_t SIZE>
+struct Type : public SuperType<T, SIZE>
 {
-    using DAO                          = TypeDAO<T, SIZE, Type_<T, SIZE>>;
-    using array_t                      = typename DAO::array_t;
+    using Super      = SuperType<T, SIZE>;
+    using value_type = typename Super::value_type;
+    using array_t    = typename Super::array_t;
+
     auto constexpr static add_func_ptr = Type_<T, SIZE>::add_func_ptr;
     auto constexpr static mul_func_ptr = Type_<T, SIZE>::mul_func_ptr;
     // auto constexpr static fma_func_ptr = Type_<T, SIZE>::fma_func_ptr;
 
     Type() noexcept = default;
-    Type(typename DAO::value_type val) noexcept
-        : DAO{val}
+
+
+    // handles when AVX is not enabled at compile time
+    template<typename Y = T, typename = std::enable_if_t<!std::is_same_v<Y, array_t>>>
+    Type(value_type val) noexcept
+        : Super{val}
     {
     }
     Type(array_t&& arr) noexcept
-        : DAO{std::forward<array_t>(arr)}
+        : Super{std::forward<array_t>(arr)}
     {
     }
 };
