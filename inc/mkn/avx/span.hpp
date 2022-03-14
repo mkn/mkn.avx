@@ -48,39 +48,53 @@ namespace mkn::avx
 template<typename T>
 class Span
 {
+    using R = std::decay_t<T>;
+
 public:
-    auto constexpr static N = Options::N<T>();
+    using value_type        = T;
+    auto constexpr static N = Options::N<R>();
+    // auto static constexpr is_const = std::is_const_v<T>;
 
     using AVX_t = mkn::avx::Type<T, N>;
 
-    Span(T* d, std::size_t s)
+    Span(T* d, std::size_t s) noexcept
         : span{d, s}
     {
     }
 
-    Span(std::vector<T>& v)
+    template<typename C, std::enable_if_t<kul::is_span_like_v<C>, bool> = 0>
+    Span(C const& v) noexcept
+        : span{v.data(), v.size()}
+    {
+    }
+    template<typename C, std::enable_if_t<kul::is_span_like_v<C>, bool> = 0>
+    Span(C& v) noexcept
         : span{v.data(), v.size()}
     {
     }
 
-    void add(Span const& a, Span const& b) noexcept
+
+    template<typename T0, typename T1>
+    void add(Span<T0> const& a, Span<T1> const& b) noexcept
     {
-        auto& v0 = *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&this->span);
-        auto& v1 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&a.span);
-        auto& v2 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&b.span);
+        auto& v0 = caster(*this);
+        auto& v1 = caster(a);
+        auto& v2 = caster(b);
+
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] = v1[i] + v1[i];
         for (std::size_t i = size() - size() % N; i < size(); ++i)
             span[i] = a.span[i] + b.span[i];
     }
 
-    void mul(Span const& a, Span const& b) noexcept
+    template<typename T0, typename T1>
+    void mul(Span<T0> const& a, Span<T1> const& b) noexcept
     {
         static_assert(sizeof(mkn::kul::Span<AVX_t>) == sizeof(mkn::kul::Span<T>));
 
-        auto& v0 = *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&this->span);
-        auto& v1 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&a.span);
-        auto& v2 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&b.span);
+        auto& v0 = caster(*this);
+        auto& v1 = caster(a);
+        auto& v2 = caster(b);
 
         assert(v0.size() == v1.size() and v1.size() == v2.size());
         for (std::size_t i = 0; i < size() / N; ++i)
@@ -89,57 +103,92 @@ public:
             span[i] = a.span[i] * b.span[i];
     }
 
-    void operator+=(Span const& that) noexcept
+
+    template<typename T0>
+    void operator+=(Span<T0> const& that) noexcept
     {
         assert(this->size() >= that.size());
 
-        auto& v0 = *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&this->span);
-        auto& v1 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&that.span);
+        auto& v0 = caster(*this);
+        auto& v1 = caster(that);
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] += v1[i];
         for (std::size_t i = size() - size() % N; i < size(); ++i)
             span[i] += that.span[i];
     }
 
-    void operator*=(Span const& that) noexcept
+    template<typename T0>
+    void operator*=(Span<T0> const& that) noexcept
     {
         assert(this->size() >= that.size());
 
         static_assert(sizeof(mkn::kul::Span<AVX_t>) == sizeof(mkn::kul::Span<T>));
 
-        auto& v0 = *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&this->span);
-        auto& v1 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&that.span);
+        auto& v0 = caster(*this);
+        auto& v1 = caster(that);
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] *= v1[i];
         for (std::size_t i = size() - size() % N; i < size(); ++i)
             span[i] *= that.span[i];
     }
 
-    auto& size() const { return span.size(); }
-    auto data() const { return span.data(); }
-    auto data() { return span.data(); }
+    template<typename T0>
+    bool operator==(Span<T0> const& that) const noexcept
+    { // TODO vectorize
+        for (std::size_t i = 0; i < size(); ++i)
+            if (span[i] != that.span[i])
+                return false;
+        return true;
+    }
 
-    auto& operator[](std::size_t i) const { return span[i]; }
-    auto& operator[](std::size_t i) { return span[i]; }
+    bool operator==(T const t) const noexcept
+    { // TODO vectorize
+        for (std::size_t i = 0; i < size(); ++i)
+            if (span[i] != t)
+                return false;
+        return true;
+    }
 
-    auto& operator()() { return span; }
-    auto& operator()() const { return span; }
+    auto& size() const noexcept { return span.size(); }
+    auto data() const noexcept { return span.data(); }
+    auto data() noexcept { return span.data(); }
+
+    auto& operator[](std::size_t i) const noexcept { return span[i]; }
+    auto& operator[](std::size_t i) noexcept { return span[i]; }
+
+    auto& operator()() noexcept { return span; }
+    auto& operator()() const noexcept { return span; }
+
+
+    mkn::kul::Span<value_type> span;
 
 private:
-    template<typename T0>
-    auto& cast_to_AVX(T0 t)
+    template<typename T0, typename = std::enable_if_t<std::is_same_v<R, std::decay_t<T0>>>>
+    static auto& caster(Span<T0>& that) noexcept
     {
-        return *reinterpret_cast<mkn::avx::Type<T, N>*>(cast_to_N(t));
+        return *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&that.span);
     }
 
-    template<typename T0>
-    auto cast_to_N(T0 t)
+    template<typename T0, typename = std::enable_if_t<std::is_same_v<R, std::decay_t<T0>>>>
+    static auto& caster(Span<T0> const& that) noexcept
     {
-        return reinterpret_cast<std::array<T, N>*>(t);
+        return *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&that.span);
     }
-
-    mkn::kul::Span<T> span;
 };
+
+
+
+template<typename Container>
+auto make_span(Container& container) noexcept
+{
+    return Span<typename Container::value_type>{container};
+}
+template<typename Container>
+auto make_span(Container const& container) noexcept
+{
+    return Span<typename Container::value_type const>{container};
+}
+
 
 } /* namespace mkn::avx */
 

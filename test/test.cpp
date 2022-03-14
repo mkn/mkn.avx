@@ -17,25 +17,25 @@ void vec()
     a += b;
     a *= b;
 
-    for (std::size_t i = 0; i < a.size(); ++i)
-    {
-        assert(a[i] == 15);
-    }
+    assert(a == 15);
 }
 
 template<typename T>
 void span()
 {
-    std::vector<T> v0(103, 2), v1(103, 3);
-    mkn::avx::Span<T> a(v0), b(v1);
+    std::vector<T> v0(103, 2);
+    auto a = mkn::avx::make_span(v0);
+
+    std::vector<T> const v1(103, 3);
+    auto b = mkn::avx::make_span(v1);
 
     a += b;
     a *= b;
+    assert(a == 15);
 
-    for (std::size_t i = 0; i < a.size(); ++i)
-    {
-        assert(a[i] == 15);
-    }
+    // a /= b;
+    // a -= b;
+    // assert(a == 2);
 }
 
 
@@ -73,11 +73,11 @@ int main() noexcept
 {
     std::cout << __FILE__ << std::endl;
 
-    vec<float>();
-    vec<double>();
+    // vec<float>();
+    // vec<double>();
 
     span<float>();
-    span<double>();
+    // span<double>();
 
     // fma();
 
