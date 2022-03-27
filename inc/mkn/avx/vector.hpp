@@ -31,7 +31,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MKN_AVX_VECTOR_HPP_
 #define _MKN_AVX_VECTOR_HPP_
 
+#include "mkn/avx/def.hpp"
 #include "mkn/avx/span.hpp"
+
+#include <vector>
+#include <optional>
 
 namespace mkn::avx
 {
@@ -52,16 +56,61 @@ struct _V_
 template<typename T, typename Allocator = typename std::vector<T>::allocator_type>
 class Vector : public _V_<T, Allocator>, public Span<T>
 {
+    using This = Vector<T, Allocator>;
+    using Span<T>::modulo_leftover_idx;
+
 public:
-    // TODO - figure out at compile time the best available instructions
-    auto constexpr static AVX_N = 2;
-    using Vec                   = _V_<T, Allocator>;
+    auto constexpr static N = Options::N<T>();
+    using Vec               = _V_<T, Allocator>;
     using Vec::vec;
 
-    Vector(std::size_t s, T val = 0)
+    Vector(std::size_t s = 0, T val = 0)
         : Vec(s, val)
         , Span<T>{Vec::vec.data(), Vec::vec.size()}
     {
+    }
+
+
+    auto operator+(This const& that) noexcept
+    {
+        using AVX_t = typename Span<T>::AVX_t;
+
+        assert(this->size() >= that.size());
+
+        Vector<T> r(this->size());
+
+        auto& v0 = *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&(*this)());
+        auto& v1 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&that());
+        auto& r0 = *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&r());
+
+        for (std::size_t i = 0; i < this->size() / N; ++i)
+            r0[i] = v0[i] + v1[i];
+
+        for (std::size_t i = modulo_leftover_idx(); i < this->size(); ++i)
+            r[i] = (*this)[i] + that[i];
+
+        return r;
+    }
+
+    auto operator*(This const& that) noexcept
+    {
+        using AVX_t = typename Span<T>::AVX_t;
+
+        assert(this->size() >= that.size());
+
+        Vector<T> r(this->size());
+
+        auto& v0 = *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&(*this)());
+        auto& v1 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&that());
+        auto& r0 = *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&r());
+
+        for (std::size_t i = 0; i < this->size() / N; ++i)
+            r0[i] = v0[i] * v1[i];
+
+        for (std::size_t i = modulo_leftover_idx(); i < this->size(); ++i)
+            r[i] = (*this)[i] * that[i];
+
+        return r;
     }
 };
 
