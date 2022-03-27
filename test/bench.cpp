@@ -68,124 +68,115 @@ void inline NO_VECTORIZE multiply_and_add(Float const* a, Float const* b, Float 
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-void mul_fp64_noavx(benchmark::State& state)
+
+template<typename T>
+void mul_no_avx(benchmark::State& state)
 {
     std::vector<double> a(SIZE, 2), b(SIZE, 2), c(SIZE);
 
     for (auto _ : state)
         mkn::noavx::mul<SIZE>(&a[0], &b[0], &c[0]);
 }
-BENCHMARK(mul_fp64_noavx)->Unit(benchmark::kMicrosecond);
 
-void mul_fp64_noavx_inplace(benchmark::State& state)
+
+template<typename T>
+void mul_no_avx_inplace(benchmark::State& state)
 {
     std::vector<double> a(SIZE, 2), b(SIZE, 2);
 
     for (auto _ : state)
         mkn::noavx::mul_inplace<SIZE>(&a[0], &b[0]);
 }
-BENCHMARK(mul_fp64_noavx_inplace)->Unit(benchmark::kMicrosecond);
 
 
-void mul_fp64_avx(benchmark::State& state)
+
+template<typename T>
+void mul_avx(benchmark::State& state)
 {
-    mkn::avx::Vector<double> a(SIZE, 2), b(SIZE, 2), c(SIZE);
+    mkn::avx::Vector<T> a(SIZE, 2), b(SIZE, 2), c(SIZE);
     for (auto _ : state)
         c.mul(a, b);
 }
-BENCHMARK(mul_fp64_avx)->Unit(benchmark::kMicrosecond);
 
 
-void mul_fp64_avx_inplace(benchmark::State& state)
+template<typename T>
+void mul_avx_inplace(benchmark::State& state)
 {
-    mkn::avx::Vector<double> a(SIZE, 2), b(SIZE, 2);
+    mkn::avx::Vector<T> a(SIZE, 2), b(SIZE, 2);
     for (auto _ : state)
         a *= b;
 }
-BENCHMARK(mul_fp64_avx_inplace)->Unit(benchmark::kMicrosecond);
 
 
-
-void mul_fp32_avx_inplace(benchmark::State& state)
+template<typename T>
+void mul_avx_inplace_single(benchmark::State& state)
 {
-    mkn::avx::Vector<float> a(SIZE, 2), b(SIZE, 2);
+    mkn::avx::Vector<T> a(SIZE, 2);
+    for (auto _ : state)
+        a *= 2;
+}
+
+
+template<typename T>
+void mul_avx_inplace_array(benchmark::State& state)
+{
+    constexpr auto N = mkn::avx::Span<T>::N;
+
+    mkn::avx::Vector<T> a(SIZE, 2);
+    std::array<T, N> b;
+    std::fill(b.begin(), b.end(), 2);
+
     for (auto _ : state)
         a *= b;
 }
-BENCHMARK(mul_fp32_avx_inplace)->Unit(benchmark::kMicrosecond);
 
 
-void mul_std_int32_t_avx_inplace(benchmark::State& state)
+template<typename T>
+void add_avx_inplace(benchmark::State& state)
 {
-    mkn::avx::Vector<std::int32_t> a(SIZE, 2), b(SIZE, 2);
-    for (auto _ : state)
-        a *= b;
-}
-BENCHMARK(mul_std_int32_t_avx_inplace)->Unit(benchmark::kMicrosecond);
-
-
-
-
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-
-
-
-void add_fp64_noavx(benchmark::State& state)
-{
-    std::vector<double> a(SIZE, 1), b(SIZE, 2), c(SIZE);
-
-    for (auto _ : state)
-        mkn::noavx::add<SIZE>(&a[0], &b[0], &c[0]);
-}
-BENCHMARK(add_fp64_noavx)->Unit(benchmark::kMicrosecond);
-
-
-void add_fp64_noavx_inplace(benchmark::State& state)
-{
-    std::vector<double> a(SIZE, 1), b(SIZE, 2);
-
-    for (auto _ : state)
-        mkn::noavx::add_inplace<SIZE>(&a[0], &b[0]);
-}
-BENCHMARK(add_fp64_noavx_inplace)->Unit(benchmark::kMicrosecond);
-
-
-void add_fp64_avx(benchmark::State& state)
-{
-    mkn::avx::Vector<double> a(SIZE, 2), b(SIZE, 2), c(SIZE);
-    for (auto _ : state)
-        c.add(a, b);
-}
-BENCHMARK(add_fp64_avx)->Unit(benchmark::kMicrosecond);
-
-void add_fp64_avx_inplace(benchmark::State& state)
-{
-    mkn::avx::Vector<double> a(SIZE, 2), b(SIZE, 2);
+    mkn::avx::Vector<T> a(SIZE, 2), b(SIZE, 2);
     for (auto _ : state)
         a += b;
 }
-BENCHMARK(add_fp64_avx_inplace)->Unit(benchmark::kMicrosecond);
 
 
-void add_fp32_avx_inplace(benchmark::State& state)
+template<typename T>
+void add_avx_inplace_single(benchmark::State& state)
 {
-    mkn::avx::Vector<float> a(SIZE, 2), b(SIZE, 2);
+    mkn::avx::Vector<T> a(SIZE, 2);
     for (auto _ : state)
-        a *= b;
+        a += 2;
 }
-BENCHMARK(add_fp32_avx_inplace)->Unit(benchmark::kMicrosecond);
 
 
-void add_std_int32_t_avx_inplace(benchmark::State& state)
-{
-    mkn::avx::Vector<std::int32_t> a(SIZE, 2), b(SIZE, 2);
-    for (auto _ : state)
-        a += b;
-}
-BENCHMARK(add_std_int32_t_avx_inplace)->Unit(benchmark::kMicrosecond);
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 
+
+BENCHMARK_TEMPLATE(mul_no_avx, double)->Unit(benchmark::kMicrosecond);
+BENCHMARK_TEMPLATE(mul_no_avx_inplace, double)->Unit(benchmark::kMicrosecond);
+BENCHMARK_TEMPLATE(mul_avx, double)->Unit(benchmark::kMicrosecond);
+BENCHMARK_TEMPLATE(mul_avx_inplace, double)->Unit(benchmark::kMicrosecond);
+BENCHMARK_TEMPLATE(mul_avx_inplace_array, double)->Unit(benchmark::kMicrosecond);
+BENCHMARK_TEMPLATE(mul_avx_inplace_single, double)->Unit(benchmark::kMicrosecond);
+BENCHMARK_TEMPLATE(add_avx_inplace, double)->Unit(benchmark::kMicrosecond);
+BENCHMARK_TEMPLATE(add_avx_inplace_single, double)->Unit(benchmark::kMicrosecond);
+
+
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+
+BENCHMARK_TEMPLATE(mul_no_avx, float)->Unit(benchmark::kMicrosecond);
+BENCHMARK_TEMPLATE(mul_no_avx_inplace, float)->Unit(benchmark::kMicrosecond);
+BENCHMARK_TEMPLATE(mul_avx, float)->Unit(benchmark::kMicrosecond);
+BENCHMARK_TEMPLATE(mul_avx_inplace, float)->Unit(benchmark::kMicrosecond);
+BENCHMARK_TEMPLATE(mul_avx_inplace_array, float)->Unit(benchmark::kMicrosecond);
+BENCHMARK_TEMPLATE(mul_avx_inplace_single, float)->Unit(benchmark::kMicrosecond);
+BENCHMARK_TEMPLATE(add_avx_inplace, float)->Unit(benchmark::kMicrosecond);
+BENCHMARK_TEMPLATE(add_avx_inplace_single, float)->Unit(benchmark::kMicrosecond);
 
 
 
@@ -194,85 +185,11 @@ BENCHMARK(add_std_int32_t_avx_inplace)->Unit(benchmark::kMicrosecond);
 //////////////////////////////////////////////////////////////////////////////
 
 
-// void fma_double(benchmark::State& state)
-// {
-
-//     std::vector<double> a(SIZE, 1), b(SIZE, 2), c(SIZE, 3), d(SIZE);
-
-//     for (auto _ : state)
-//         for (std::size_t i = 0; i < SIZE; i++)
-//             mkn::noavx::multiply_and_add<1>(&a[i], &b[i], &c[i], &d[i]);
-// }
-// BENCHMARK(fma_double)->Unit(benchmark::kMicrosecond);
-
-// void fma_fp64_avx_256(benchmark::State& state)
-// {
-//     constexpr std::size_t AVX_COUNT = 256 / (sizeof(double) * 8);
-//     using AVX                       = mkn::avx::Type<double, AVX_COUNT>;
-//     constexpr std::size_t SIZE      = 1000000 / AVX::value_count;
-
-//     std::vector<AVX> a(SIZE, 1), b(SIZE, 2), c(SIZE, 3), d(SIZE);
-
-//     for (auto _ : state)
-//         for (std::size_t i = 0; i < SIZE; i++)
-//             d[i] = std::fma(a[i], b[i], c[i]);
-// }
-// BENCHMARK(fma_fp64_avx_256)->Unit(benchmark::kMicrosecond);
-
-// void fma_fp64_avx_128(benchmark::State& state)
-// {
-//     constexpr std::size_t AVX_COUNT = 128 / (sizeof(double) * 8);
-//     using AVX                       = mkn::avx::Type<double, AVX_COUNT>;
-//     constexpr std::size_t SIZE      = 1000000 / AVX::value_count;
-
-//     std::vector<AVX> a(SIZE, 1), b(SIZE, 2), c(SIZE, 3), d(SIZE);
-
-//     for (auto _ : state)
-//         for (std::size_t i = 0; i < SIZE; i++)
-//             d[i] = std::fma(a[i], b[i], c[i]);
-// }
-// BENCHMARK(fma_fp64_avx_128)->Unit(benchmark::kMicrosecond);
-
-// void fma_float(benchmark::State& state)
-// {
-//     std::size_t SIZE = 1000000;
-
-//     std::vector<float> a(SIZE, 1), b(SIZE, 2), c(SIZE, 3), d(SIZE);
-
-//     for (auto _ : state)
-//         for (std::size_t i = 0; i < SIZE; i++)
-//             mkn::noavx::multiply_and_add<1>(&a[i], &b[i], &c[i], &d[i]);
-// }
-// BENCHMARK(fma_float)->Unit(benchmark::kMicrosecond);
-
-// void fma_fp32_avx_256(benchmark::State& state)
-// {
-//     constexpr std::size_t AVX_COUNT = 256 / (sizeof(float) * 8);
-//     using AVX                       = mkn::avx::Type<float, AVX_COUNT>;
-//     constexpr std::size_t SIZE      = 1000000 / AVX::value_count;
-
-//     std::vector<AVX> a(SIZE, 1), b(SIZE, 2), c(SIZE, 3), d(SIZE);
-
-//     for (auto _ : state)
-//         for (std::size_t i = 0; i < SIZE; i++)
-//             d[i] = std::fma(a[i], b[i], c[i]);
-// }
-// BENCHMARK(fma_fp32_avx_256)->Unit(benchmark::kMicrosecond);
-
-// void fma_fp32_avx_128(benchmark::State& state)
-// {
-//     constexpr std::size_t AVX_COUNT = 128 / (sizeof(float) * 8);
-//     using AVX                       = mkn::avx::Type<float, AVX_COUNT>;
-//     constexpr std::size_t SIZE      = 1000000 / AVX::value_count;
-
-//     std::vector<AVX> a(SIZE, 1), b(SIZE, 2), c(SIZE, 3), d(SIZE);
-
-//     for (auto _ : state)
-//         for (std::size_t i = 0; i < SIZE; i++)
-//             d[i] = std::fma(a[i], b[i], c[i]);
-// }
-// BENCHMARK(fma_fp32_avx_128)->Unit(benchmark::kMicrosecond);
-
+BENCHMARK_TEMPLATE(mul_avx_inplace, std::uint32_t)->Unit(benchmark::kMicrosecond);
+BENCHMARK_TEMPLATE(mul_avx_inplace_array, std::uint32_t)->Unit(benchmark::kMicrosecond);
+BENCHMARK_TEMPLATE(mul_avx_inplace_single, std::uint32_t)->Unit(benchmark::kMicrosecond);
+BENCHMARK_TEMPLATE(add_avx_inplace, std::uint32_t)->Unit(benchmark::kMicrosecond);
+BENCHMARK_TEMPLATE(add_avx_inplace_single, std::uint32_t)->Unit(benchmark::kMicrosecond);
 
 
 //////////////////////////////////////////////////////////////////////////////

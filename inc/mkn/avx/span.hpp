@@ -201,9 +201,7 @@ public:
     mkn::kul::Span<value_type> span;
 
 protected:
-    auto modulo_leftover_idx(){
-        return size() - size() % N;
-    }
+    auto modulo_leftover_idx() { return size() - size() % N; }
 
 private:
     std::array<T, N> scratch{};
