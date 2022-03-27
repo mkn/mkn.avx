@@ -57,6 +57,7 @@ template<typename T, typename Allocator = typename std::vector<T>::allocator_typ
 class Vector : public _V_<T, Allocator>, public Span<T>
 {
     using This = Vector<T, Allocator>;
+    using Span<T>::modulo_leftover_idx;
 
 public:
     auto constexpr static N = Options::N<T>();
@@ -85,7 +86,7 @@ public:
         for (std::size_t i = 0; i < this->size() / N; ++i)
             r0[i] = v0[i] + v1[i];
 
-        for (std::size_t i = this->size() - this->size() % N; i < this->size(); ++i)
+        for (std::size_t i = modulo_leftover_idx(); i < this->size(); ++i)
             r[i] = (*this)[i] + that[i];
 
         return r;
@@ -106,7 +107,7 @@ public:
         for (std::size_t i = 0; i < this->size() / N; ++i)
             r0[i] = v0[i] * v1[i];
 
-        for (std::size_t i = this->size() - this->size() % N; i < this->size(); ++i)
+        for (std::size_t i = modulo_leftover_idx(); i < this->size(); ++i)
             r[i] = (*this)[i] * that[i];
 
         return r;

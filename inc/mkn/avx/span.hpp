@@ -99,7 +99,7 @@ public:
         assert(v0.size() == v1.size() and v1.size() == v2.size());
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] = v1[i] * v1[i];
-        for (std::size_t i = size() - size() % N; i < size(); ++i)
+        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
             span[i] = a.span[i] * b.span[i];
     }
 
@@ -147,7 +147,7 @@ public:
         auto& v1 = caster(that);
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] *= v1[i];
-        for (std::size_t i = size() - size() % N; i < size(); ++i)
+        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
             span[i] *= that.span[i];
     }
 
@@ -199,6 +199,11 @@ public:
 
 
     mkn::kul::Span<value_type> span;
+
+protected:
+    auto modulo_leftover_idx(){
+        return size() - size() % N;
+    }
 
 private:
     std::array<T, N> scratch{};
