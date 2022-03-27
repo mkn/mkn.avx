@@ -118,6 +118,25 @@ public:
     }
 
     template<typename T0>
+    void operator+=(std::array<T0, N> const& arr) noexcept
+    {
+        assert(this->size() % N == 0);
+
+        Span<T0 const> that{arr};
+        auto& v0 = caster(*this);
+        auto& v1 = caster(that);
+        for (std::size_t i = 0; i < size() / N; ++i)
+            v0[i] += v1[0]; // v1 only has one set of elements
+    }
+
+
+    void operator+=(T const& val) noexcept
+    {
+        std::fill(scratch.begin(), scratch.end(), val);
+        (*this) += scratch;
+    }
+
+    template<typename T0>
     void operator*=(Span<T0> const& that) noexcept
     {
         assert(this->size() >= that.size());
@@ -131,6 +150,25 @@ public:
         for (std::size_t i = size() - size() % N; i < size(); ++i)
             span[i] *= that.span[i];
     }
+
+    template<typename T0>
+    void operator*=(std::array<T0, N> const& arr) noexcept
+    {
+        assert(this->size() % N == 0);
+
+        Span<T0 const> that{arr};
+        auto& v0 = caster(*this);
+        auto& v1 = caster(that);
+        for (std::size_t i = 0; i < size() / N; ++i)
+            v0[i] *= v1[0]; // v1 only has one set of elements
+    }
+
+    void operator*=(T const& val) noexcept
+    {
+        std::fill(scratch.begin(), scratch.end(), val);
+        (*this) *= scratch;
+    }
+
 
     template<typename T0>
     bool operator==(Span<T0> const& that) const noexcept
@@ -163,6 +201,8 @@ public:
     mkn::kul::Span<value_type> span;
 
 private:
+    std::array<T, N> scratch{};
+
     template<typename T0, typename = std::enable_if_t<std::is_same_v<R, std::decay_t<T0>>>>
     static auto& caster(Span<T0>& that) noexcept
     {

@@ -39,6 +39,36 @@ void span()
 }
 
 
+template<typename T>
+void arr()
+{
+    constexpr auto N = mkn::avx::Span<T>::N;
+    {
+        std::array<T, N> b;
+        std::vector<T> v0(N);
+        auto a = mkn::avx::make_span(v0);
+
+        for (std::size_t i = 0; i < N; ++i)
+            v0[i] = (i + 1), b[i] = (i + 2);
+
+        a += 2;
+        a *= b;
+
+        for (std::size_t i = 0; i < N; ++i)
+            assert(v0[i] == ((i + 1) + 2) * (i + 2));
+    }
+
+    std::vector<T> v0(100, 2);
+    auto a = mkn::avx::make_span(v0);
+
+    std::array<T, N> b;
+    std::fill(b.begin(), b.end(), 3);
+
+    a *= b;
+    assert(a == 6);
+}
+
+
 template<typename T = double>
 void fma()
 {
@@ -69,17 +99,20 @@ void fma()
     check(std::fma(a[0], a[1], a[2]));
 }
 
+template<typename T>
+void test()
+{
+    vec<T>();
+    span<T>();
+    arr<T>();
+}
+
 int main() noexcept
 {
     std::cout << __FILE__ << std::endl;
 
-    // vec<float>();
-    // vec<double>();
-
-    span<float>();
-    // span<double>();
-
-    // fma();
+    test<float>();
+    test<double>();
 
     return 0;
 }
