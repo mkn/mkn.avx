@@ -111,6 +111,11 @@ public:
 
         auto& v0 = caster(*this);
         auto& v1 = caster(that);
+
+        KLOG(INF)<< size();
+        KLOG(INF)<< &span[9];
+        KLOG(INF)<< &that.span[9];
+
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] += v1[i];
         for (std::size_t i = size() - size() % N; i < size(); ++i)

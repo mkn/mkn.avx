@@ -1,7 +1,9 @@
 
 #include "mkn/kul/log.hpp"
+#include "mkn/kul/math.hpp"
 #include "mkn/avx.hpp"
 #include "mkn/avx/vector.hpp"
+#include "mkn/avx/grid.hpp"
 
 #include <array>
 #include <vector>
@@ -99,12 +101,73 @@ void fma()
     check(std::fma(a[0], a[1], a[2]));
 }
 
+
+template<typename T = double>
+void grid()
+{
+    {
+        std::vector<T> v0(1000, 1), v1(1000, 1);
+
+        mkn::avx::Grid<T, 3> grid0{v0.data(), {10, 10, 10}};
+        mkn::avx::Grid<T, 3> grid1{v1.data(), {10, 10, 10}};
+
+        // (grid0 >> 0) += (grid1 >> 0);
+        grid0 += grid1 ;
+        KLOG(INF) << mkn::kul::math::sum(v0);
+        assert(mkn::kul::math::sum(v0) == 2000);
+    }
+
+    // { // !!?? FAILS DUE TO ALIGNMENT ??!!
+    //     static constexpr std::size_t S = 10;
+    //     std::vector<T> v0(S*S*S, 1), v1(S*S*S, 1);
+
+    //     mkn::avx::Grid<T, 3> grid0{v0.data(), {S, S, S}};
+    //     mkn::avx::Grid<T, 3> grid1{v1.data(), {S, S, S}};
+
+    //     (grid0 >> 0) += (grid1 >> 0);
+    //     assert(mkn::kul::math::sum(v0) == S*S*S*2);
+    // }
+
+    {
+        static constexpr std::size_t S = 12;
+        std::vector<T> v0(S*S*S, 1), v1(S*S*S, 1);
+
+        mkn::avx::Grid<T, 3> grid0{v0.data(), {S, S, S}};
+        mkn::avx::Grid<T, 3> grid1{v1.data(), {S, S, S}};
+
+        (grid0 >> 0) += (grid1 >> 0);
+        // KLOG(INF) << mkn::kul::math::sum(v0);
+        assert(mkn::kul::math::sum(v0) == S*S*S*2);
+    }
+
+    // {
+    //     std::vector<T> v0(1000, 1), v1(1000, 1);
+
+    //     mkn::avx::Grid<T, 3> grid0{v0.data(), {10, 10, 10}};
+    //     mkn::avx::Grid<T, 3> grid1{v1.data(), {10, 10, 10}};
+
+    //     (grid0 >> 1) += (grid1 >> 1);
+    //     assert(mkn::kul::math::sum(v0) == 1000 + (8 * 8 * 8));
+    // }
+
+    // {
+    //     std::vector<T> v0(1000, 1), v1(1000, 2);
+
+    //     mkn::avx::Grid<T, 3> grid0{v0.data(), {10, 10, 10}};
+    //     mkn::avx::Grid<T, 3> grid1{v1.data(), {10, 10, 10}};
+
+    //     (grid0 >> 1) *= (grid1 >> 1);
+    //     assert(mkn::kul::math::sum(v0) == 1000 + (8 * 8 * 8));
+    // }
+}
+
 template<typename T>
 void test()
 {
-    vec<T>();
-    span<T>();
-    arr<T>();
+    grid<T>();
+    // vec<T>();
+    // span<T>();
+    // arr<T>();
 }
 
 int main() noexcept
