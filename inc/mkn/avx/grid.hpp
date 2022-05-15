@@ -60,8 +60,8 @@ class Grid : public mkn::avx::Span<T>
 
 
         Grid& m_real;
-        std::array<std::size_t, 3> m_offset{0,0,0};
-        std::array<std::size_t, 3> m_shape{1,1,1};
+        std::array<std::size_t, 3> m_offset{0, 0, 0};
+        std::array<std::size_t, 3> m_shape{1, 1, 1};
         T* m_data = nullptr;
 
         void operator*=(NestedGrid const& that)
@@ -96,7 +96,6 @@ class Grid : public mkn::avx::Span<T>
             {
                 for (std::size_t y = m_offset[1]; y < m_shape[1] + m_offset[1]; ++y)
                 {
-
                     KLOG(INF) << z << " " << y;
 
                     std::uint32_t z_offset = z * real().shape()[0] * real().shape()[1];
@@ -121,7 +120,8 @@ class Grid : public mkn::avx::Span<T>
 
         void _set_shape()
         {
-            for (std::size_t d = 0; d < dimension; ++d) m_shape[d] = real().shape()[d] - (2 * m_offset[d]);
+            for (std::size_t d = 0; d < dimension; ++d)
+                m_shape[d] = real().shape()[d] - (2 * m_offset[d]);
         }
     };
 
