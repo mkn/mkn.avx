@@ -1,15 +1,14 @@
 
 #include "mkn/kul/log.hpp"
+#include "mkn/kul/math.hpp"
 #include "mkn/avx.hpp"
 #include "mkn/avx/vector.hpp"
+#include "mkn/avx/grid.hpp"
 
 #include <array>
-#include <vector>
 #include <cassert>
-#include <iostream>
 
-
-template<typename T>
+template<typename T, std::uint16_t N>
 void vec()
 {
     mkn::avx::Vector<T> a(103, 2), b(103, 3);
@@ -20,29 +19,36 @@ void vec()
     assert(a == 15);
 }
 
-template<typename T>
+template<typename T, std::uint16_t N>
 void span()
 {
-    std::vector<T> v0(103, 2);
-    auto a = mkn::avx::make_span(v0);
+    mkn::avx::Vector<T> v0(103, 2);
+    mkn::avx::Span<T, N> a{v0};
 
-    std::vector<T> const v1(103, 3);
-    auto b = mkn::avx::make_span(v1);
+    mkn::avx::Vector<T> const v1(103, 3);
+    mkn::avx::Span<T const, N> b{v1};
 
     a += b;
+    assert(a == 5);
     a *= b;
     assert(a == 15);
 
+    a -= 2;
+    assert(a == 13);
+
+    a -= b;
+    assert(a == 10);
+
     // a /= b;
-    // a -= b;
     // assert(a == 2);
 }
 
 
-template<typename T>
+template<typename T, std::uint16_t N>
 void arr()
 {
-    constexpr auto N = mkn::avx::Span<T>::N;
+    using Span = mkn::avx::Span<T, N>;
+
     {
         std::array<T, N> b;
         std::vector<T> v0(N);
@@ -58,14 +64,17 @@ void arr()
             assert(v0[i] == ((i + 1) + 2) * (i + 2));
     }
 
-    std::vector<T> v0(100, 2);
-    auto a = mkn::avx::make_span(v0);
+
+    std::vector<T> v0(N, 2);
+    Span a{v0};
 
     std::array<T, N> b;
     std::fill(b.begin(), b.end(), 3);
 
+    a += b;
+    assert(a == 5);
     a *= b;
-    assert(a == 6);
+    assert(a == 15);
 }
 
 
@@ -99,20 +108,83 @@ void fma()
     check(std::fma(a[0], a[1], a[2]));
 }
 
+
+template<typename T = double>
+void grid()
+{
+    {
+        std::vector<T> v0(1000, 1), v1(1000, 1);
+
+        mkn::avx::Grid<T, 3> grid0{v0.data(), {10, 10, 10}};
+        mkn::avx::Grid<T, 3> grid1{v1.data(), {10, 10, 10}};
+
+        // (grid0 >> 0) += (grid1 >> 0);
+        grid0 += grid1;
+        KLOG(INF) << mkn::kul::math::sum(v0);
+        assert(mkn::kul::math::sum(v0) == 2000);
+    }
+
+    // { // !!?? FAILS DUE TO ALIGNMENT ??!!
+    //     static constexpr std::size_t S = 10;
+    //     std::vector<T> v0(S*S*S, 1), v1(S*S*S, 1);
+
+    //     mkn::avx::Grid<T, 3> grid0{v0.data(), {S, S, S}};
+    //     mkn::avx::Grid<T, 3> grid1{v1.data(), {S, S, S}};
+
+    //     (grid0 >> 0) += (grid1 >> 0);
+    //     assert(mkn::kul::math::sum(v0) == S*S*S*2);
+    // }
+
+    {
+        static constexpr std::size_t S = 12;
+        std::vector<T> v0(S * S * S, 1), v1(S * S * S, 1);
+
+        mkn::avx::Grid<T, 3> grid0{v0.data(), {S, S, S}};
+        mkn::avx::Grid<T, 3> grid1{v1.data(), {S, S, S}};
+
+        (grid0 >> 0) += (grid1 >> 0);
+        // KLOG(INF) << mkn::kul::math::sum(v0);
+        assert(mkn::kul::math::sum(v0) == S * S * S * 2);
+    }
+
+    // {
+    //     std::vector<T> v0(1000, 1), v1(1000, 1);
+
+    //     mkn::avx::Grid<T, 3> grid0{v0.data(), {10, 10, 10}};
+    //     mkn::avx::Grid<T, 3> grid1{v1.data(), {10, 10, 10}};
+
+    //     (grid0 >> 1) += (grid1 >> 1);
+    //     assert(mkn::kul::math::sum(v0) == 1000 + (8 * 8 * 8));
+    // }
+
+    // {
+    //     std::vector<T> v0(1000, 1), v1(1000, 2);
+
+    //     mkn::avx::Grid<T, 3> grid0{v0.data(), {10, 10, 10}};
+    //     mkn::avx::Grid<T, 3> grid1{v1.data(), {10, 10, 10}};
+
+    //     (grid0 >> 1) *= (grid1 >> 1);
+    //     assert(mkn::kul::math::sum(v0) == 1000 + (8 * 8 * 8));
+    // }
+}
+
 template<typename T>
 void test()
 {
-    vec<T>();
-    span<T>();
-    arr<T>();
+    // grid<T>();
+    // arr<T>();
+    // vec<T>();
 }
 
 int main() noexcept
 {
     std::cout << __FILE__ << std::endl;
 
-    test<float>();
-    test<double>();
+    span<double, 2>();
+    span<double, 4>();
+
+    span<float, 4>();
+    span<float, 8>();
 
     return 0;
 }

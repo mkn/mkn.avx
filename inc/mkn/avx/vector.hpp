@@ -34,16 +34,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "mkn/avx/def.hpp"
 #include "mkn/avx/span.hpp"
 
+#include "mkn/kul/alloc.hpp"
+
 #include <vector>
-#include <optional>
 
 namespace mkn::avx
 {
-template<typename T, typename Allocator_ = typename std::vector<T>::allocator_type>
+template<typename T, typename Allocator>
 struct _V_
 {
-    using Allocator = Allocator_;
-    using vec_t     = std::vector<T, Allocator>;
+    using allocator_type = Allocator;
+    using vec_t          = std::vector<T, Allocator>;
 
     _V_(std::size_t s, T val = 0)
         : vec(s, val)
@@ -53,7 +54,8 @@ struct _V_
     vec_t vec;
 };
 
-template<typename T, typename Allocator = typename std::vector<T>::allocator_type>
+
+template<typename T, typename Allocator = kul::AlignedAllocator<T, 32>>
 class Vector : public _V_<T, Allocator>, public Span<T>
 {
     using This = Vector<T, Allocator>;
@@ -68,6 +70,18 @@ public:
         : Vec(s, val)
         , Span<T>{Vec::vec.data(), Vec::vec.size()}
     {
+    }
+
+    auto& operator=(This const& that)
+    {
+        vec = that.vec;
+        return *this;
+    }
+
+    auto& operator=(This&& that)
+    {
+        vec = std::move(that.vec);
+        return *this;
     }
 
 
@@ -112,6 +126,14 @@ public:
 
         return r;
     }
+
+    // auto size() const { return vec.size();}
+    // auto data() const { return vec.data();}
+    // auto data() { return vec.data();}
+
+
+    auto& vector() { return vec; }
+    auto& vector() const { return vec; }
 };
 
 } /* namespace mkn::avx */

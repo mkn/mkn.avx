@@ -65,10 +65,12 @@ struct Options
     bool static constexpr AVX2 = __AVX2__;
 
     template<typename T, std::uint16_t operands = 2>
-    auto static constexpr N()
+    std::uint16_t static constexpr N()
     {
         if constexpr (AVX2)
-            return 256 / 8 / sizeof(T) / operands;
+            return 256 / 8 / sizeof(T);
+        else if constexpr (AVX)
+            return 128 / 8 / sizeof(T);
         else
             return 1;
     }
