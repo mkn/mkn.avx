@@ -1,5 +1,5 @@
 /**
-Copyright (c) 2020, Philip Deegan.
+Copyright (c) 2024, Philip Deegan.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -64,11 +64,13 @@ struct Options
     bool static constexpr AVX  = __AVX__;
     bool static constexpr AVX2 = __AVX2__;
 
-    template<typename T, std::uint16_t operands = 2>
-    auto static constexpr N()
+    template<typename T, std::uint16_t operands = 1>
+    std::uint16_t static constexpr N()
     {
         if constexpr (AVX2)
             return 256 / 8 / sizeof(T) / operands;
+        else if constexpr (AVX)
+            return 128 / 8 / sizeof(T) / operands;
         else
             return 1;
     }
