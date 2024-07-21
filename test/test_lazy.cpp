@@ -4,6 +4,50 @@
 
 using namespace mkn::avx;
 
+void fma_simple()
+{
+    using DV      = std::vector<double, mkn::kul::AlignedAllocator<double, 32>>;
+    std::size_t N = 4;
+    DV a0(N, 1), a1(N, 2), a2(N, 3);
+    auto [l0, l1, l2] = lazy(a0, a1, a2);
+    auto lz           = l0 * l1 + l2;
+    auto r            = eval(lz);
+    KOUT(NON) << r.front() << " " << r.back();
+    mkn::kul::abort_if_not(r.front() == 5 and r.back() == 5);
+}
+
+void fma0()
+{
+    using DV      = std::vector<double, mkn::kul::AlignedAllocator<double, 32>>;
+    std::size_t N = 4;
+    DV a0(N, 1), a1(N, 2), a2(N, 3);
+    auto [l0, l1, l2] = lazy(a0, a1, a2);
+    auto lz           = l0 * l1 + l2 + l0;
+    auto r            = eval(lz);
+    KOUT(NON) << r.front() << " " << r.back();
+    mkn::kul::abort_if_not(r.front() == 6 and r.back() == 6);
+}
+
+void fma1()
+{
+    using DV      = std::vector<double, mkn::kul::AlignedAllocator<double, 32>>;
+    std::size_t N = 4;
+    DV a0(N, 1), a1(N, 2), a2(N, 3);
+    auto [l0, l1, l2] = lazy(a0, a1, a2);
+    auto lz           = l0 * l1 + l2 + l0 * l1 + l2;
+    auto r            = eval(lz);
+    KOUT(NON) << r.front() << " " << r.back();
+    mkn::kul::abort_if_not(r.front() == 10 and r.back() == 10);
+}
+
+void fma()
+{
+    fma_simple();
+    fma0();
+    fma1();
+}
+
+
 void fn0()
 {
     using DV      = std::vector<double, mkn::kul::AlignedAllocator<double, 32>>;
@@ -31,6 +75,7 @@ void fn1()
 
 int main()
 {
+    // fma();
     fn0();
     fn1();
 };

@@ -78,7 +78,7 @@ public:
     void add(Span<T0> const& a, Span<T1> const& b) noexcept
     {
         auto const& [v0, v1, v2] = cast(*this, a, b);
-        assert(v0.size() == v1.size() and v1.size() == v2.size());
+
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] = v1[i] + v2[i];
         for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
@@ -89,7 +89,7 @@ public:
     void sub(Span<T0> const& a, Span<T1> const& b) noexcept
     {
         auto const& [v0, v1, v2] = cast(*this, a, b);
-        assert(v0.size() == v1.size() and v1.size() == v2.size());
+
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] = v1[i] - v2[i];
         for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
@@ -100,7 +100,7 @@ public:
     void mul(Span<T0> const& a, Span<T1> const& b) noexcept
     {
         auto const& [v0, v1, v2] = cast(*this, a, b);
-        assert(v0.size() == v1.size() and v1.size() == v2.size());
+
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] = v1[i] * v2[i];
         for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
@@ -111,11 +111,22 @@ public:
     void div(Span<T0> const& a, Span<T1> const& b) noexcept
     {
         auto const& [v0, v1, v2] = cast(*this, a, b);
-        assert(v0.size() == v1.size() and v1.size() == v2.size());
+
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] = v1[i] / v2[i];
         for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
             span[i] = a.span[i] / b.span[i];
+    }
+
+    template<typename T0, typename T1, typename T2>
+    void fma(Span<T0> const& a, Span<T1> const& b, Span<T2> const& c) noexcept
+    {
+        auto const& [v0, v1, v2, v3] = cast(*this, a, b, c);
+
+        for (std::size_t i = 0; i < size() / N; ++i)
+            v0[i] = mkn::avx::fma(v1[i], v2[i], v3[i]);
+        // for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
+        //     span[i] = a.span[i] / b.span[i];
     }
 
 

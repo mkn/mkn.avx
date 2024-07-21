@@ -72,31 +72,30 @@ struct LazyVal
     }
     LazyVal(LazyVal&&) = default;
 
-    auto& operator+=(This const& that) = delete;
-    auto operator+(This const& that)
+    auto operator+(This const& that) const
     {
         operands.emplace_back(v, that.v, 0, operands.size());
         return *this;
     }
-    auto operator-(This const& that)
+    auto operator-(This const& that) const
     {
         operands.emplace_back(v, that.v, 1, operands.size());
         return *this;
     }
 
-    auto& operator*=(This const& that) = delete;
-    auto operator*(This const& that)
+    auto operator*(This const& that) const
     {
         operands.emplace_back(v, that.v, 2, operands.size());
         return *this;
     }
-    auto operator/(This const& that)
+    auto operator/(This const& that) const
     {
         operands.emplace_back(v, that.v, 3, operands.size());
         return *this;
     }
 
     auto& operator()() { return *v; }
+    auto& operator()() const { return *v; }
 
     T* v;
     static inline thread_local std::vector<LazyOp<T>> operands;
@@ -125,6 +124,8 @@ struct LazyEvaluator
         = [](Span_t& r, Span_ct const& a, Span_ct const& b) mutable { r.mul(a, b); };
     static constexpr inline auto __div__
         = [](Span_t& r, Span_ct const& a, Span_ct const& b) mutable { r.div(a, b); };
+    static constexpr inline auto __fma__ = [](Span_t& r, Span_ct const& a, Span_ct const& b,
+                                              Span_ct const& c) mutable { r.fma(a, b, c); };
 
     void compile()
     {
@@ -134,6 +135,7 @@ struct LazyEvaluator
             fns.emplace_back(__sub__);
             fns.emplace_back(__mul__);
             fns.emplace_back(__div__);
+            // fns.emplace_back(__fma__);
         }
         tmps.resize(t.operands.size());
         for (size_t i = t.operands.size(); i-- > 0;)
@@ -156,11 +158,13 @@ struct LazyEvaluator
         }
     }
 
-    auto operator()(bool /*in_place*/)
+    auto operator()(T* const ret, bool fill = false)
     {
         compile();
         auto const& size = t.operands[0].a->size();
-        Vec_t ret        = t(); // copy
+
+        if (fill)
+            std::copy(t.operands[0].a->data(), t.operands[0].a->data() + size, ret);
 
         for (std::size_t i = 0; i < size / N; ++i)
         {
@@ -169,11 +173,16 @@ struct LazyEvaluator
 
             for (std::size_t o = 0; o < t.operands.size(); ++o)
             {
-                auto const& op     = t.operands[o];
+                auto const& op = t.operands[o];
+                if (op.op > 10)
+                    continue;
                 bool const use_tmp = op.a != t.v;
                 Span_ct const a{op.a->data() + off, N};
                 Span_ct const b{op.b->data() + off, N};
-                Span_t r{ret.data() + off, N};
+                Span_t r{ret + off, N};
+
+                //   KLOG(INF) << a[0] << " " << b[0] << " " << r[0] << " " << use_tmp << " "
+                //           << bool{op.prev};
 
                 if (use_tmp)
                 {
@@ -186,6 +195,7 @@ struct LazyEvaluator
                     else
                     {
                         Span_t tspan{tmps[o].data(), N};
+
                         fns[op.op](tspan, a, b);
                     }
                 }
@@ -203,9 +213,8 @@ struct LazyEvaluator
                 }
             }
         }
-
-        return ret;
     }
+
 
     LazyVal_t& t;
     std::vector<std::function<void(Span_t&, Span_ct const&, Span_ct const&)>> fns{};
@@ -218,12 +227,16 @@ struct LazyEvaluator
 template<typename T>
 auto eval(LazyVal<T>& v, bool in_place = false)
 {
-    return LazyEvaluator<LazyVal<T>>{v}(in_place);
+    auto ret = v(); // copy
+    LazyEvaluator<LazyVal<T>>{v}(ret.data());
+    return ret;
 }
 template<typename T>
 auto eval(LazyVal<T>&& v, bool in_place = false)
 {
-    return LazyEvaluator<LazyVal<T>>{v}(in_place);
+    auto ret = v(); // copy
+    LazyEvaluator<LazyVal<T>>{v}(ret.data());
+    return ret;
 }
 
 template<typename... T>

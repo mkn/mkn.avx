@@ -275,10 +275,10 @@ void operator*=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
     a() = Type<T, SIZE>::mul_func_ptr(a(), b());
 }
 
-template<typename AVX_t>
-AVX_t fma(AVX_t const& a, AVX_t const& b, AVX_t const& c) noexcept
+template<typename T, std::size_t SIZE>
+Type<T, SIZE> fma(Type<T, SIZE> const& a, Type<T, SIZE> const& b, Type<T, SIZE> const& c) noexcept
 {
-    return {AVX_t::fma_func_ptr(a(), b(), c())};
+    return {Type<T, SIZE>::Super::impl_type::fma_func_ptr(a(), b(), c())};
 }
 
 } /* namespace mkn::avx */
