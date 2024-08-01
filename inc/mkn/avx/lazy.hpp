@@ -31,9 +31,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MKN_AVX_LAZY_HPP_
 #define _MKN_AVX_LAZY_HPP_
 
+#include "mkn/kul/io.hpp"
 #include "mkn/kul/log.hpp"
 #include "mkn/kul/alloc.hpp"
-#include "mkn/kul/threads.hpp"
 #include "mkn/avx/span.hpp"
 
 #include <tuple>
@@ -42,64 +42,67 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace mkn::avx
 {
 
-template<typename T>
+template<typename T, typename Small = std::uint8_t /* use std::uint16_t for printing */>
 struct LazyOp
 {
-    auto constexpr static N = mkn::avx::Options::N<T>();
-
     T* a;
     T const* b;
-    std::size_t op;
-    std::uint16_t id;
-
-    LazyOp* prev = nullptr;
-    bool marked  = false;
+    std::size_t op = 0;
+    Small t        = 0;
+    LazyOp* prev   = nullptr;
+    LazyOp* next   = nullptr;
 };
 
 template<typename T>
 struct LazyVal
 {
-    using value_type = T;
-    using This       = LazyVal<T>;
+    static thread_local inline std::size_t alive = 0;
+    using value_type                             = T;
+    using This                                   = LazyVal<T>;
 
     LazyVal(T& t)
         : v{&t}
     {
     }
-    LazyVal(LazyVal const& that)
-        : v{that.v}
-    {
-    }
-    LazyVal(LazyVal&&) = default;
+    ~LazyVal() {}
+
+    LazyVal(LazyVal const& that) = default;
+    LazyVal(LazyVal&& that)      = default;
+
 
     auto operator+(This const& that) const
     {
-        operands.emplace_back(v, that.v, 0, operands.size());
+        operands.emplace_back(v, that.v, 0);
         return *this;
     }
     auto operator-(This const& that) const
     {
-        operands.emplace_back(v, that.v, 1, operands.size());
+        operands.emplace_back(v, that.v, 1);
         return *this;
     }
 
     auto operator*(This const& that) const
     {
-        operands.emplace_back(v, that.v, 2, operands.size());
+        operands.emplace_back(v, that.v, 2);
         return *this;
     }
     auto operator/(This const& that) const
     {
-        operands.emplace_back(v, that.v, 3, operands.size());
+        operands.emplace_back(v, that.v, 3);
         return *this;
     }
 
     auto& operator()() { return *v; }
     auto& operator()() const { return *v; }
 
+
+    bool muldiv(std::size_t const& i) const { return operands[i].op == 2 or operands[i].op == 3; }
+
     T* v;
     static inline thread_local std::vector<LazyOp<T>> operands;
 };
+
+
 
 template<typename LazyVal_t>
 struct LazyEvaluator
@@ -110,7 +113,14 @@ struct LazyEvaluator
     using Span_ct           = mkn::avx::Span<T const>;
     auto constexpr static N = mkn::avx::Options::N<T>(); // max vector size
 
-    ~LazyEvaluator()
+    LazyEvaluator(LazyVal_t& _t)
+        : t{_t}
+    {
+    }
+
+    ~LazyEvaluator() { clear(); }
+
+    void clear()
     {
         tmps.clear();
         LazyVal_t::operands.clear();
@@ -124,37 +134,27 @@ struct LazyEvaluator
         = [](Span_t& r, Span_ct const& a, Span_ct const& b) mutable { r.mul(a, b); };
     static constexpr inline auto __div__
         = [](Span_t& r, Span_ct const& a, Span_ct const& b) mutable { r.div(a, b); };
-    static constexpr inline auto __fma__ = [](Span_t& r, Span_ct const& a, Span_ct const& b,
-                                              Span_ct const& c) mutable { r.fma(a, b, c); };
 
     void compile()
     {
-        if (not fns.size())
-        {
-            fns.emplace_back(__add__);
-            fns.emplace_back(__sub__);
-            fns.emplace_back(__mul__);
-            fns.emplace_back(__div__);
-            // fns.emplace_back(__fma__);
-        }
-        tmps.resize(t.operands.size());
+        tmps.resize(t.operands.size() - 1);
         for (size_t i = t.operands.size(); i-- > 0;)
         {
             auto& op = t.operands[i];
+
             for (size_t j = i; j-- > 0;)
             {
                 auto& jop = t.operands[j];
-                if (jop.marked)
+                if (jop.next)
                     continue;
                 if (jop.a == op.b)
                 {
-                    op.prev    = &jop;
-                    jop.marked = 1;
+                    op.prev  = &jop;
+                    jop.next = &op;
+
                     break;
                 }
             }
-            if (op.prev)
-                continue;
         }
     }
 
@@ -171,40 +171,46 @@ struct LazyEvaluator
             std::size_t const off = i * N;
             assert(off < size);
 
+            std::size_t tmp = 0;
             for (std::size_t o = 0; o < t.operands.size(); ++o)
             {
-                auto const& op = t.operands[o];
-                if (op.op > 10)
-                    continue;
+                auto& op           = t.operands[o];
                 bool const use_tmp = op.a != t.v;
                 Span_ct const a{op.a->data() + off, N};
                 Span_ct const b{op.b->data() + off, N};
                 Span_t r{ret + off, N};
 
-                //   KLOG(INF) << a[0] << " " << b[0] << " " << r[0] << " " << use_tmp << " "
-                //           << bool{op.prev};
-
-                if (use_tmp)
+                if (op.prev)
                 {
-                    if (op.prev)
+                    if (use_tmp)
                     {
-                        Span_ct const pspan{tmps[op.prev->id].data(), N};
-                        Span_t tspan{tmps[o].data(), N};
+                        Span_ct const pspan{tmps[op.prev->t].data(), N};
+                        Span_t tspan{tmps[tmp].data(), N};
                         fns[op.op](tspan, a, pspan);
+
+                        op.t = tmp++;
                     }
                     else
                     {
-                        Span_t tspan{tmps[o].data(), N};
-
-                        fns[op.op](tspan, a, b);
+                        if (op.prev->a == t.v)
+                        {
+                            fns[op.op](r, r, b);
+                        }
+                        else
+                        {
+                            Span_t tspan{tmps[op.prev->t].data(), N};
+                            fns[op.op](r, r, tspan);
+                        }
                     }
                 }
                 else
                 {
-                    if (op.prev)
+                    if (use_tmp)
                     {
-                        Span_ct const tspan{tmps[op.prev->id].data(), N};
-                        fns[op.op](r, r, tspan);
+                        Span_t tspan{tmps[tmp].data(), N};
+                        fns[op.op](tspan, a, b);
+
+                        op.t = tmp++;
                     }
                     else
                     {
@@ -216,8 +222,103 @@ struct LazyEvaluator
     }
 
 
+    void write_compilable(std::string const& fileout)
+    {
+        kul::io::Writer w{fileout};
+        std::string const padding = "        ";
+        std::string const header  = R"(
+#include "mkn/kul/alloc.hpp"
+#include "mkn/avx/span.hpp"
+
+#include <array>
+#include <vector>
+#include <cstdint>
+
+template<typename E>
+using AVXVec = std::vector<E, mkn::kul::AlignedAllocator<E, 32>>;
+)";
+
+        std::string const funcheader = R"(
+
+template<typename LazyVal_t, typename T>
+void exec(LazyVal_t const& t, T* const ret){
+    using Span_t            = mkn::avx::Span<T>;
+    using Span_ct           = mkn::avx::Span<T const>;
+    auto constexpr static N = mkn::avx::Options::N<T>();
+    static AVXVec<std::array<T, N>> tmps(n_tmps);
+    std::fill_n(tmps[0].data(), N * tmps.size(), 0);
+    auto const& ops = t.operands;
+    auto const& size = t.operands[0].a->size();
+    for (std::size_t i = 0; i < size / N; ++i)
+    {
+        std::size_t const off = i * N;
+        Span_t r{ret + off, N};
+)";
+
+        std::stringstream body;
+        body << "\n";
+        std::size_t tmp = 0;
+        for (std::size_t o = 0; o < t.operands.size(); ++o)
+        {
+            auto& op            = t.operands[o];
+            bool const use_tmp  = op.a != t.v;
+            std::string const a = "Span_ct{ops[" + std::to_string(o) + "].a->data() + off, N}";
+            std::string const b = "Span_ct{ops[" + std::to_string(o) + "].b->data() + off, N}";
+
+            if (op.prev)
+            {
+                if (use_tmp)
+                {
+                    body << padding << "Span_t{tmps[" << tmp << "].data(), N}." << fn_strs[op.op]
+                         << "(" << a << ", Span_ct{tmps[" << op.prev->t << "].data(), N});"
+                         << mkn::kul::os::EOL();
+
+                    op.t = tmp++;
+                }
+                else
+                {
+                    if (op.prev->a == t.v)
+                    {
+                        body << padding << "r." << fn_strs[op.op] << "(r, " << b << ");"
+                             << mkn::kul::os::EOL();
+                    }
+                    else
+                    {
+                        body << padding << "r." << fn_strs[op.op] << "(r, Span_ct{tmps["
+                             << op.prev->t << "].data(), N});" << mkn::kul::os::EOL();
+                    }
+                }
+            }
+            else
+            {
+                if (use_tmp)
+                {
+                    body << padding << "Span_t{tmps[" << tmp << "].data(), N}." << fn_strs[op.op]
+                         << "(" << a << ", " << b << ");" << mkn::kul::os::EOL();
+                    op.t = tmp++;
+                }
+                else
+                {
+                    body << padding << "r." << fn_strs[op.op] << "(r, " << b << ");"
+                         << mkn::kul::os::EOL();
+                }
+            }
+        }
+
+        w << header;
+        w << "\nconstexpr static std::size_t n_tmps = " << (tmp) << ";";
+        w << funcheader;
+        w << body.str();
+        w << R"(    }
+}
+
+)";
+    }
+
     LazyVal_t& t;
-    std::vector<std::function<void(Span_t&, Span_ct const&, Span_ct const&)>> fns{};
+    std::vector<std::function<void(Span_t&, Span_ct const&, Span_ct const&)>> fns{__add__, __sub__,
+                                                                                  __mul__, __div__};
+    std::vector<std::string> fn_strs{"add", "sub", "mul", "div"};
 
     template<typename E>
     using AVXVec = std::vector<E, mkn::kul::AlignedAllocator<E, 32>>;
@@ -227,14 +328,14 @@ struct LazyEvaluator
 template<typename T>
 auto eval(LazyVal<T>& v, bool in_place = false)
 {
-    auto ret = v(); // copy
+    auto ret = v();
     LazyEvaluator<LazyVal<T>>{v}(ret.data());
     return ret;
 }
 template<typename T>
 auto eval(LazyVal<T>&& v, bool in_place = false)
 {
-    auto ret = v(); // copy
+    auto ret = v();
     LazyEvaluator<LazyVal<T>>{v}(ret.data());
     return ret;
 }

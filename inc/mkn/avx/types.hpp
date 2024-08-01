@@ -48,6 +48,7 @@ struct Type_
     auto constexpr static sub_func_ptr = [](auto& a, auto& b) { return a - b; };
     auto constexpr static mul_func_ptr = [](auto& a, auto& b) { return a * b; };
     auto constexpr static div_func_ptr = [](auto& a, auto& b) { return a / b; };
+    auto constexpr static fma_func_ptr = [](auto& a, auto& b, auto& c) { return a * b + c; };
 };
 
 template<typename Type>
@@ -283,15 +284,15 @@ Type<T, SIZE> fma(Type<T, SIZE> const& a, Type<T, SIZE> const& b, Type<T, SIZE> 
 
 } /* namespace mkn::avx */
 
-namespace std
-{
-template<typename T, std::size_t SIZE>
-auto fma(mkn::avx::Type<T, SIZE> const& a, mkn::avx::Type<T, SIZE> const& b,
-         mkn::avx::Type<T, SIZE> const& c) noexcept
-{
-    return mkn::avx::fma(a, b, c);
-}
+// namespace std
+// {
+// template<typename T, std::size_t SIZE>
+// auto fma(mkn::avx::Type<T, SIZE> const& a, mkn::avx::Type<T, SIZE> const& b,
+//          mkn::avx::Type<T, SIZE> const& c) noexcept
+// {
+//     return mkn::avx::fma(a, b, c);
+// }
 
-} /* namespace std */
+// } /* namespace std */
 
 #endif /* _MKN_AVX_TYPES_HPP_ */
