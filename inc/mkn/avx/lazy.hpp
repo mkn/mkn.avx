@@ -45,12 +45,20 @@ namespace mkn::avx
 template<typename T, typename Small = std::uint8_t /* use std::uint16_t for printing */>
 struct LazyOp
 {
+    LazyOp(T* _a, T const* _b, std::size_t const& _op)
+        : a{_a}
+        , b{_b}
+        , op{_op}
+    {
+    }
+
+
     T* a;
     T const* b;
-    std::size_t op = 0;
-    Small t        = 0;
-    LazyOp* prev   = nullptr;
-    LazyOp* next   = nullptr;
+    std::size_t op;
+    Small t      = 0;
+    LazyOp* prev = nullptr;
+    LazyOp* next = nullptr;
 };
 
 template<typename T>
