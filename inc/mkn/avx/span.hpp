@@ -1,5 +1,5 @@
 /**
-Copyright (c) 2020, Philip Deegan.
+Copyright (c) 2024, Philip Deegan.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -33,6 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #include <array>
+#include <tuple>
 #include <vector>
 #include <cassert>
 #include <cstdint>
@@ -57,7 +58,7 @@ public:
 
     using AVX_t = mkn::avx::Type<T, N>;
 
-    Span(T* d, std::size_t s) noexcept
+    Span(T* d, std::size_t const& s) noexcept
         : span{d, s}
     {
     }
@@ -77,43 +78,68 @@ public:
     template<typename T0, typename T1>
     void add(Span<T0> const& a, Span<T1> const& b) noexcept
     {
-        auto& v0 = caster(*this);
-        auto& v1 = caster(a);
-        auto& v2 = caster(b);
+        auto const& [v0, v1, v2] = cast(*this, a, b);
 
         for (std::size_t i = 0; i < size() / N; ++i)
-            v0[i] = v1[i] + v1[i];
-        for (std::size_t i = size() - size() % N; i < size(); ++i)
+            v0[i] = v1[i] + v2[i];
+        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
             span[i] = a.span[i] + b.span[i];
+    }
+
+    template<typename T0, typename T1>
+    void sub(Span<T0> const& a, Span<T1> const& b) noexcept
+    {
+        auto const& [v0, v1, v2] = cast(*this, a, b);
+
+        for (std::size_t i = 0; i < size() / N; ++i)
+            v0[i] = v1[i] - v2[i];
+        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
+            span[i] = a.span[i] - b.span[i];
     }
 
     template<typename T0, typename T1>
     void mul(Span<T0> const& a, Span<T1> const& b) noexcept
     {
-        static_assert(sizeof(mkn::kul::Span<AVX_t>) == sizeof(mkn::kul::Span<T>));
+        auto const& [v0, v1, v2] = cast(*this, a, b);
 
-        auto& v0 = caster(*this);
-        auto& v1 = caster(a);
-        auto& v2 = caster(b);
-
-        assert(v0.size() == v1.size() and v1.size() == v2.size());
         for (std::size_t i = 0; i < size() / N; ++i)
-            v0[i] = v1[i] * v1[i];
+            v0[i] = v1[i] * v2[i];
         for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
             span[i] = a.span[i] * b.span[i];
     }
+
+    template<typename T0, typename T1>
+    void div(Span<T0> const& a, Span<T1> const& b) noexcept
+    {
+        auto const& [v0, v1, v2] = cast(*this, a, b);
+
+        for (std::size_t i = 0; i < size() / N; ++i)
+            v0[i] = v1[i] / v2[i];
+        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
+            span[i] = a.span[i] / b.span[i];
+    }
+
+    template<typename T0, typename T1, typename T2>
+    void fma(Span<T0> const& a, Span<T1> const& b, Span<T2> const& c) noexcept
+    {
+        auto const& [v0, v1, v2, v3] = cast(*this, a, b, c);
+
+        for (std::size_t i = 0; i < size() / N; ++i)
+            v0[i] = mkn::avx::fma(v1[i], v2[i], v3[i]);
+        // for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
+        //     span[i] = a.span[i] / b.span[i];
+    }
+
 
 
     template<typename T0>
     void operator+=(Span<T0> const& that) noexcept
     {
         assert(this->size() >= that.size());
-
-        auto& v0 = caster(*this);
-        auto& v1 = caster(that);
+        auto const& [v0, v1] = cast(*this, that);
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] += v1[i];
-        for (std::size_t i = size() - size() % N; i < size(); ++i)
+        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
             span[i] += that.span[i];
     }
 
@@ -123,8 +149,7 @@ public:
         assert(this->size() % N == 0);
 
         Span<T0 const> that{arr};
-        auto& v0 = caster(*this);
-        auto& v1 = caster(that);
+        auto const& [v0, v1] = cast(*this, that);
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] += v1[0]; // v1 only has one set of elements
     }
@@ -140,11 +165,7 @@ public:
     void operator*=(Span<T0> const& that) noexcept
     {
         assert(this->size() >= that.size());
-
-        static_assert(sizeof(mkn::kul::Span<AVX_t>) == sizeof(mkn::kul::Span<T>));
-
-        auto& v0 = caster(*this);
-        auto& v1 = caster(that);
+        auto const& [v0, v1] = cast(*this, that);
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] *= v1[i];
         for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
@@ -157,8 +178,7 @@ public:
         assert(this->size() % N == 0);
 
         Span<T0 const> that{arr};
-        auto& v0 = caster(*this);
-        auto& v1 = caster(that);
+        auto const& [v0, v1] = cast(*this, that);
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] *= v1[0]; // v1 only has one set of elements
     }
@@ -216,6 +236,12 @@ private:
     static auto& caster(Span<T0> const& that) noexcept
     {
         return *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&that.span);
+    }
+
+    template<typename... Args>
+    static auto cast(Args&&... args)
+    {
+        return std::forward_as_tuple(caster(args)...);
     }
 };
 

@@ -10,12 +10,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
-    - name: "Build/Test" # contains slash so use quotes otherwise UB
+    - name: "Build/Test"
       env:
         MKN_GCC_PREFERRED: 1
       run: |
-        wget https://github.com/PhilipDeegan/mkn/releases/download/latest/mkn_nix
+        wget https://github.com/mkn/mkn/releases/download/latest/mkn_nix
         chmod +x mkn_nix
         KLOG=3 ./mkn_nix clean build run -p test,bench -OtKda "-std=c++17 -fPIC" -l -pthread -g 0

@@ -1,5 +1,5 @@
 /**
-Copyright (c) 2020, Philip Deegan.
+Copyright (c) 2024, Philip Deegan.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -33,13 +33,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "mkn/avx/def.hpp"
 #include "mkn/avx/span.hpp"
+#include "mkn/kul/alloc.hpp"
 
 #include <vector>
 #include <optional>
 
 namespace mkn::avx
 {
-template<typename T, typename Allocator_ = typename std::vector<T>::allocator_type>
+template<typename T, typename Allocator_>
 struct _V_
 {
     using Allocator = Allocator_;
@@ -53,7 +54,7 @@ struct _V_
     vec_t vec;
 };
 
-template<typename T, typename Allocator = typename std::vector<T>::allocator_type>
+template<typename T, typename Allocator = kul::AlignedAllocator<T, 32>>
 class Vector : public _V_<T, Allocator>, public Span<T>
 {
     using This = Vector<T, Allocator>;

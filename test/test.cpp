@@ -23,10 +23,11 @@ void vec()
 template<typename T>
 void span()
 {
-    std::vector<T> v0(103, 2);
+    using Vec = typename mkn::avx::Vector<T>::Vec::vec_t;
+    Vec v0(103, 2);
     auto a = mkn::avx::make_span(v0);
 
-    std::vector<T> const v1(103, 3);
+    Vec const v1(103, 3);
     auto b = mkn::avx::make_span(v1);
 
     a += b;
@@ -42,10 +43,11 @@ void span()
 template<typename T>
 void arr()
 {
+    using Vec        = typename mkn::avx::Vector<T>::Vec::vec_t;
     constexpr auto N = mkn::avx::Span<T>::N;
     {
         std::array<T, N> b;
-        std::vector<T> v0(N);
+        Vec v0(N);
         auto a = mkn::avx::make_span(v0);
 
         for (std::size_t i = 0; i < N; ++i)
@@ -58,7 +60,7 @@ void arr()
             assert(v0[i] == ((i + 1) + 2) * (i + 2));
     }
 
-    std::vector<T> v0(100, 2);
+    std::vector<T> v0(N * 10, 2);
     auto a = mkn::avx::make_span(v0);
 
     std::array<T, N> b;

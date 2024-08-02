@@ -1,5 +1,5 @@
 /**
-Copyright (c) 2020, Philip Deegan.
+Copyright (c) 2024, Philip Deegan.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -45,7 +45,10 @@ struct Type_
 
     // default operations without avx
     auto constexpr static add_func_ptr = [](auto& a, auto& b) { return a + b; };
+    auto constexpr static sub_func_ptr = [](auto& a, auto& b) { return a - b; };
     auto constexpr static mul_func_ptr = [](auto& a, auto& b) { return a * b; };
+    auto constexpr static div_func_ptr = [](auto& a, auto& b) { return a / b; };
+    auto constexpr static fma_func_ptr = [](auto& a, auto& b, auto& c) { return a * b + c; };
 };
 
 template<typename Type>
@@ -61,6 +64,7 @@ struct TypeDAO
 {
     static constexpr std::size_t value_count = SIZE;
     using value_type                         = T;
+    using impl_type                          = Impl;
     using array_t                            = typename Impl::internal_type;
 
     TypeDAO() noexcept = default;
@@ -91,7 +95,9 @@ struct Type_<double, 2>
 {
     using internal_type                = __m128d;
     auto constexpr static add_func_ptr = &_mm_add_pd;
+    auto constexpr static sub_func_ptr = &_mm_sub_pd;
     auto constexpr static mul_func_ptr = &_mm_mul_pd;
+    auto constexpr static div_func_ptr = &_mm_div_pd;
     auto constexpr static fma_func_ptr = &_mm_fmadd_pd;
 };
 
@@ -100,7 +106,9 @@ struct Type_<double, 4>
 {
     using internal_type                = __m256d;
     auto constexpr static add_func_ptr = &_mm256_add_pd;
+    auto constexpr static sub_func_ptr = &_mm256_sub_pd;
     auto constexpr static mul_func_ptr = &_mm256_mul_pd;
+    auto constexpr static div_func_ptr = &_mm256_div_pd;
     auto constexpr static fma_func_ptr = &_mm256_fmadd_pd;
 };
 //////////////////// double ////////////////////
@@ -114,7 +122,9 @@ struct Type_<float, 4>
 {
     using internal_type                = __m128;
     auto constexpr static add_func_ptr = &_mm_add_ps;
+    auto constexpr static sub_func_ptr = &_mm_sub_ps;
     auto constexpr static mul_func_ptr = &_mm_mul_ps;
+    auto constexpr static div_func_ptr = &_mm_div_ps;
     auto constexpr static fma_func_ptr = &_mm_fmadd_ps;
 };
 
@@ -123,7 +133,9 @@ struct Type_<float, 8>
 {
     using internal_type                = __m256;
     auto constexpr static add_func_ptr = &_mm256_add_ps;
+    auto constexpr static sub_func_ptr = &_mm256_sub_ps;
     auto constexpr static mul_func_ptr = &_mm256_mul_ps;
+    auto constexpr static div_func_ptr = &_mm256_div_ps;
     auto constexpr static fma_func_ptr = &_mm256_fmadd_ps;
 };
 //////////////////// float ////////////////////
@@ -137,6 +149,7 @@ struct Type_<std::int16_t, 4>
 {
     using internal_type                = __m128i;
     auto constexpr static add_func_ptr = &_mm_add_epi16;
+    auto constexpr static sub_func_ptr = &_mm_sub_epi16;
     // auto constexpr static mul_func_ptr = &_mm_mul_epi16;
     // auto constexpr static fma_func_ptr = &_mm256_fmadd_ps;
 };
@@ -145,6 +158,7 @@ struct Type_<std::int16_t, 8>
 {
     using internal_type                = __m256i;
     auto constexpr static add_func_ptr = &_mm256_add_epi16;
+    auto constexpr static sub_func_ptr = &_mm256_sub_epi16;
     // auto constexpr static mul_func_ptr = &_mm256_mul_epi16;
     // auto constexpr static fma_func_ptr = &_mm256_fmadd_ps;
 };
@@ -226,10 +240,16 @@ struct Type : public SuperType<T, SIZE>
     }
 };
 
-template<typename AVX_t>
-AVX_t fma(AVX_t const& a, AVX_t const& b, AVX_t const& c) noexcept
+template<typename T, std::size_t SIZE>
+Type<T, SIZE> operator+(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
 {
-    return {AVX_t::fma_func_ptr(a(), b(), c())};
+    return {Type<T, SIZE>::add_func_ptr(a(), b())};
+}
+
+template<typename T, std::size_t SIZE>
+Type<T, SIZE> operator-(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
+{
+    return {Type<T, SIZE>::Super::impl_type::sub_func_ptr(a(), b())};
 }
 
 template<typename T, std::size_t SIZE>
@@ -239,9 +259,9 @@ Type<T, SIZE> operator*(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
 }
 
 template<typename T, std::size_t SIZE>
-Type<T, SIZE> operator+(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
+Type<T, SIZE> operator/(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
 {
-    return {Type<T, SIZE>::add_func_ptr(a(), b())};
+    return {Type<T, SIZE>::Super::impl_type::div_func_ptr(a(), b())};
 }
 
 template<typename T, std::size_t SIZE>
@@ -256,17 +276,23 @@ void operator*=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
     a() = Type<T, SIZE>::mul_func_ptr(a(), b());
 }
 
-} /* namespace mkn::avx */
-
-namespace std
-{
 template<typename T, std::size_t SIZE>
-auto fma(mkn::avx::Type<T, SIZE> const& a, mkn::avx::Type<T, SIZE> const& b,
-         mkn::avx::Type<T, SIZE> const& c) noexcept
+Type<T, SIZE> fma(Type<T, SIZE> const& a, Type<T, SIZE> const& b, Type<T, SIZE> const& c) noexcept
 {
-    return mkn::avx::fma(a, b, c);
+    return {Type<T, SIZE>::Super::impl_type::fma_func_ptr(a(), b(), c())};
 }
 
-} /* namespace std */
+} /* namespace mkn::avx */
+
+// namespace std
+// {
+// template<typename T, std::size_t SIZE>
+// auto fma(mkn::avx::Type<T, SIZE> const& a, mkn::avx::Type<T, SIZE> const& b,
+//          mkn::avx::Type<T, SIZE> const& c) noexcept
+// {
+//     return mkn::avx::fma(a, b, c);
+// }
+
+// } /* namespace std */
 
 #endif /* _MKN_AVX_TYPES_HPP_ */
