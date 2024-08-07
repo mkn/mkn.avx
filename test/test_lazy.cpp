@@ -4,7 +4,7 @@
 
 using namespace mkn::avx;
 
-constexpr static std::size_t N = 1e6;
+constexpr static std::size_t N = 1e6 + 5;
 
 void add()
 {
