@@ -36,6 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "mkn/kul/alloc.hpp"
 #include "mkn/avx/span.hpp"
 
+#include <new>
 #include <tuple>
 #include <vector>
 
@@ -174,59 +175,70 @@ struct LazyEvaluator
         if (fill)
             std::copy(t.operands[0].a->data(), t.operands[0].a->data() + size, ret);
 
-        for (std::size_t i = 0; i < size / N; ++i)
-        {
+        std::size_t tmp = 0;
+        auto do_avx     = [&](auto const& o, auto const& i) {
             std::size_t const off = i * N;
             assert(off < size);
 
-            std::size_t tmp = 0;
-            for (std::size_t o = 0; o < t.operands.size(); ++o)
+            auto& op           = t.operands[o];
+            bool const use_tmp = op.a != t.v;
+            Span_ct const a{op.a->data() + off, N};
+            Span_ct const b{op.b->data() + off, N};
+            Span_t r{ret + off, N};
+
+            if (op.prev)
             {
-                auto& op           = t.operands[o];
-                bool const use_tmp = op.a != t.v;
-                Span_ct const a{op.a->data() + off, N};
-                Span_ct const b{op.b->data() + off, N};
-                Span_t r{ret + off, N};
-
-                if (op.prev)
+                if (use_tmp)
                 {
-                    if (use_tmp)
-                    {
-                        Span_ct const pspan{tmps[op.prev->t].data(), N};
-                        Span_t tspan{tmps[tmp].data(), N};
-                        fns[op.op](tspan, a, pspan);
+                    Span_ct const pspan{tmps[op.prev->t].data(), N};
+                    Span_t tspan{tmps[tmp].data(), N};
+                    fns[op.op](tspan, a, pspan);
 
-                        op.t = tmp++;
-                    }
-                    else
-                    {
-                        if (op.prev->a == t.v)
-                        {
-                            fns[op.op](r, r, b);
-                        }
-                        else
-                        {
-                            Span_t tspan{tmps[op.prev->t].data(), N};
-                            fns[op.op](r, r, tspan);
-                        }
-                    }
+                    op.t = tmp++;
                 }
                 else
                 {
-                    if (use_tmp)
-                    {
-                        Span_t tspan{tmps[tmp].data(), N};
-                        fns[op.op](tspan, a, b);
-
-                        op.t = tmp++;
-                    }
-                    else
+                    if (op.prev->a == t.v)
                     {
                         fns[op.op](r, r, b);
                     }
+                    else
+                    {
+                        Span_t tspan{tmps[op.prev->t].data(), N};
+                        fns[op.op](r, r, tspan);
+                    }
                 }
             }
-        }
+            else
+            {
+                if (use_tmp)
+                {
+                    Span_t tspan{tmps[tmp].data(), N};
+                    fns[op.op](tspan, a, b);
+
+                    op.t = tmp++;
+                }
+                else
+                {
+                    fns[op.op](r, r, b);
+                }
+            }
+        };
+
+        auto const cl_size = std::hardware_destructive_interference_size;
+
+        std::size_t const batch = cl_size / sizeof(T) / N;
+
+        std::size_t i = 0;
+        for (; i < size / N; i += batch, tmp = 0)
+            for (std::size_t o = 0; o < t.operands.size(); ++o)
+                for (std::size_t j = 0; j < batch; ++j)
+                    do_avx(o, i + j);
+
+        if (size % N != 0)
+            for (; i < size / N + 1; i += batch, tmp = 0)
+                for (std::size_t o = 0; o < t.operands.size(); ++o)
+                    do_avx(o, i);
     }
 
 
