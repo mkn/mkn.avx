@@ -39,6 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <new>
 #include <tuple>
 #include <vector>
+#include <cstdint>
 
 namespace mkn::avx
 {
@@ -225,7 +226,11 @@ struct LazyEvaluator
             }
         };
 
-        auto const cl_size = std::hardware_destructive_interference_size;
+#ifdef __cpp_lib_hardware_interference_size
+        std::size_t const cl_size = std::hardware_destructive_interference_size;
+#else
+        std::size_t constexpr cl_size = 64;
+#endif
 
         std::size_t const batch = cl_size / sizeof(T) / N;
 
