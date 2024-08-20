@@ -11,7 +11,7 @@ profile:
 
 - name: test
   parent: headers
-  main: test/test.cpp
+  test: test/test_(\w).cpp
   mode: none
 
 - name: bench
