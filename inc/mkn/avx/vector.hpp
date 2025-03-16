@@ -38,7 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <optional>
 
-namespace mkn::avx
+namespace mkn::avx::detail
 {
 template<typename T, typename Allocator_>
 struct _V_
@@ -53,28 +53,34 @@ struct _V_
 
     vec_t vec;
 };
+} // namespace mkn::avx::detail
+
+namespace mkn::avx
+{
 
 template<typename T, typename Allocator = kul::AlignedAllocator<T, 32>>
-class Vector : public _V_<T, Allocator>, public Span<T>
+class Vector : public detail::_V_<T, Allocator>, public SpanSet<T>
 {
-    using This = Vector<T, Allocator>;
-    using Span<T>::modulo_leftover_idx;
+    using This      = Vector<T, Allocator>;
+    using SpanSet_t = SpanSet<T>;
+    using SpanSet_t::modulo_leftover_idx;
+
 
 public:
     auto constexpr static N = Options::N<T>();
-    using Vec               = _V_<T, Allocator>;
+    using Vec               = detail::_V_<T, Allocator>;
     using Vec::vec;
 
     Vector(std::size_t s = 0, T val = 0)
         : Vec(s, val)
-        , Span<T>{Vec::vec.data(), Vec::vec.size()}
+        , SpanSet_t{Vec::vec.data(), Vec::vec.size()}
     {
     }
 
 
     auto operator+(This const& that) noexcept
     {
-        using AVX_t = typename Span<T>::AVX_t;
+        using AVX_t = typename SpanSet_t::AVX_t;
 
         assert(this->size() >= that.size());
 
@@ -95,7 +101,7 @@ public:
 
     auto operator*(This const& that) noexcept
     {
-        using AVX_t = typename Span<T>::AVX_t;
+        using AVX_t = typename SpanSet_t::AVX_t;
 
         assert(this->size() >= that.size());
 

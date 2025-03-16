@@ -1,12 +1,38 @@
 
 #include "mkn/kul/log.hpp"
-#include "mkn/avx.hpp"
-#include "mkn/avx/vector.hpp"
+#include "mkn/kul/assert.hpp"
 
-#include <array>
-#include <vector>
+#include "mkn/avx.hpp"
+
+
 #include <cassert>
 #include <iostream>
+
+
+template<typename T>
+void array()
+{
+    using Array_t = mkn::avx::Array<T, mkn::avx::Options::N<T>()>;
+    Array_t a{1}, b{2};
+
+    mkn::kul::abort_if_not(a == 1);
+    mkn::kul::abort_if_not(b == 2);
+
+    a += b;
+    mkn::kul::abort_if_not(a == 3);
+
+    a *= b;
+    mkn::kul::abort_if_not(a == 6);
+
+    auto const c = []() {
+        Array_t t1{2};
+        Array_t t2{1};
+        return t1 + t2;
+    }();
+
+    a *= c;
+    mkn::kul::abort_if_not(a == 18);
+}
 
 
 template<typename T>
@@ -43,10 +69,11 @@ void span()
 template<typename T>
 void arr()
 {
+    using Array_t    = mkn::avx::Array<T, mkn::avx::Options::N<T>()>;
     using Vec        = typename mkn::avx::Vector<T>::Vec::vec_t;
     constexpr auto N = mkn::avx::Span<T>::N;
     {
-        std::array<T, N> b;
+        Array_t b;
         Vec v0(N);
         auto a = mkn::avx::make_span(v0);
 
@@ -60,10 +87,10 @@ void arr()
             assert(v0[i] == ((i + 1) + 2) * (i + 2));
     }
 
-    std::vector<T> v0(N * 10, 2);
+    Vec v0(N * 10, 2);
     auto a = mkn::avx::make_span(v0);
 
-    std::array<T, N> b;
+    Array_t b;
     std::fill(b.begin(), b.end(), 3);
 
     a *= b;
@@ -104,6 +131,7 @@ void fma()
 template<typename T>
 void test()
 {
+    array<T>();
     vec<T>();
     span<T>();
     arr<T>();

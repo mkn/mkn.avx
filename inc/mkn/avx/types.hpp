@@ -54,7 +54,7 @@ struct Type_
 template<typename Type>
 auto& Type_set(Type& avx, typename Type::value_type val) noexcept
 {
-    for (std::uint8_t i = 0; i < Type::value_count; i++)
+    for (std::uint16_t i = 0; i < Type::value_count; i++)
         avx.array[i] = val;
     return avx.array;
 }
@@ -110,6 +110,17 @@ struct Type_<double, 4>
     auto constexpr static mul_func_ptr = &_mm256_mul_pd;
     auto constexpr static div_func_ptr = &_mm256_div_pd;
     auto constexpr static fma_func_ptr = &_mm256_fmadd_pd;
+};
+
+template<>
+struct Type_<double, 8>
+{
+    using internal_type                = __m512d;
+    auto constexpr static add_func_ptr = &_mm512_add_pd;
+    auto constexpr static sub_func_ptr = &_mm512_sub_pd;
+    auto constexpr static mul_func_ptr = &_mm512_mul_pd;
+    auto constexpr static div_func_ptr = &_mm512_div_pd;
+    // auto constexpr static fma_func_ptr = &_mm256_fmadd_pd;
 };
 //////////////////// double ////////////////////
 
@@ -222,7 +233,9 @@ struct Type : public SuperType<T, SIZE>
     using array_t    = typename Super::array_t;
 
     auto constexpr static add_func_ptr = Type_<T, SIZE>::add_func_ptr;
+    auto constexpr static sub_func_ptr = Type_<T, SIZE>::sub_func_ptr;
     auto constexpr static mul_func_ptr = Type_<T, SIZE>::mul_func_ptr;
+    auto constexpr static div_func_ptr = Type_<T, SIZE>::div_func_ptr;
     // auto constexpr static fma_func_ptr = Type_<T, SIZE>::fma_func_ptr;
 
     Type() noexcept = default;
@@ -271,9 +284,21 @@ void operator+=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
 }
 
 template<typename T, std::size_t SIZE>
+void operator-=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
+{
+    a() = Type<T, SIZE>::sub_func_ptr(a(), b());
+}
+
+template<typename T, std::size_t SIZE>
 void operator*=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
 {
     a() = Type<T, SIZE>::mul_func_ptr(a(), b());
+}
+
+template<typename T, std::size_t SIZE>
+void operator/=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
+{
+    a() = Type<T, SIZE>::div_func_ptr(a(), b());
 }
 
 template<typename T, std::size_t SIZE>

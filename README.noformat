@@ -1,3 +1,26 @@
 mkn.avx
 
-C++17 AVX wrappers
+C++20 AVX wrappers
+
+
+Compile argument switches
+
+Key             MKN_AVX_1_ACTIVE
+Type            bool
+Default         true if defined(__AVX__)
+Description     activate AVX1
+
+Key             MKN_AVX_2_ACTIVE
+Type            bool
+Default         true if defined(__AVX2__)
+Description     activate AVX256
+
+Key             MKN_AVX_512_ACTIVE
+Type            bool
+Default         true if defined(__AVX512F__)
+Description     activate AVX512
+
+Key             MKN_AVX_ALIGN_AS
+Type            int
+Default         32
+Description     default alignas / allocation alignment

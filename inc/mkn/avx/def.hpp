@@ -35,39 +35,58 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cassert>
 #include <cstdint>
 #include <immintrin.h> // avx
+#include <type_traits>
 
+// try running
+//   clang -dM -march=native -E - < /dev/null | grep AVX
+//
+#if defined(__AVX__) && !defined(MKN_AVX_1_ACTIVE)
+#define MKN_AVX_1_ACTIVE 1
+#endif
 
-// #define __MMX_WITH_SSE__ 1
-// #define __SSE2_MATH__ 1
-// #define __SSE__ 1
-// #define __SSE2__ 1
-// #define __SSE_MATH__ 1
-
-
-#if !defined(__AVX__)
-#pragma message("__AVX__ not defined")
-#define __AVX__ 0
+#if !defined(MKN_AVX_1_ACTIVE)
+#define MKN_AVX_1_ACTIVE 0
 #endif
 
 
-#if !defined(__AVX2__)
-#pragma message("__AVX2__ not defined")
-#define __AVX2__ 0
+#if defined(__AVX2__) && !defined(MKN_AVX_2_ACTIVE)
+#define MKN_AVX_2_ACTIVE 1
+#endif
+
+#if !defined(MKN_AVX_2_ACTIVE)
+#define MKN_AVX_2_ACTIVE 0
 #endif
 
 
+#if defined(__AVX512F__) && !defined(MKN_AVX_512_ACTIVE)
+#define MKN_AVX_512_ACTIVE 1
+#endif
+
+#if !defined(MKN_AVX_512_ACTIVE)
+#define MKN_AVX_512_ACTIVE 0
+#endif
+
+
+#if !defined(MKN_AVX_ALIGN_AS)
+#define MKN_AVX_ALIGN_AS 32
+#endif
 
 namespace mkn::avx
 {
 struct Options
 {
-    bool static constexpr AVX  = __AVX__;
-    bool static constexpr AVX2 = __AVX2__;
+    bool static constexpr AVX               = MKN_AVX_1_ACTIVE;
+    bool static constexpr AVX2              = MKN_AVX_2_ACTIVE;
+    bool static constexpr AVX512            = MKN_AVX_512_ACTIVE;
+    std::uint16_t static constexpr ALIGN_AS = MKN_AVX_ALIGN_AS;
 
-    template<typename T, std::uint16_t operands = 1>
+    template<typename AT, std::uint16_t operands = 1>
     std::uint16_t static constexpr N()
     {
-        if constexpr (AVX2)
+        using T = std::decay_t<AT>;
+        if constexpr (AVX512)
+            return 512 / 8 / sizeof(T) / operands;
+        else if constexpr (AVX2)
             return 256 / 8 / sizeof(T) / operands;
         else if constexpr (AVX)
             return 128 / 8 / sizeof(T) / operands;
