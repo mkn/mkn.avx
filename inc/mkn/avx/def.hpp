@@ -1,5 +1,5 @@
 /**
-Copyright (c) 2024, Philip Deegan.
+Copyright (c) 2025, Philip Deegan.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -80,6 +80,7 @@ struct Options
     bool static constexpr AVX512            = MKN_AVX_512_ACTIVE;
     std::uint16_t static constexpr ALIGN_AS = MKN_AVX_ALIGN_AS;
 
+
     template<typename AT, std::uint16_t operands = 1>
     std::uint16_t static constexpr N()
     {
@@ -90,10 +91,17 @@ struct Options
             return 256 / 8 / sizeof(T) / operands;
         else if constexpr (AVX)
             return 128 / 8 / sizeof(T) / operands;
+
         else
             return 1;
     }
 };
+
+template<typename T, std::uint16_t alignment = 32>
+bool is_aligned(T* t)
+{
+    return (0 == (((std::size_t)(t)) % alignment));
+}
 
 
 } /* namespace mkn::avx */

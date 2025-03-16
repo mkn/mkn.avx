@@ -1,5 +1,5 @@
 /**
-Copyright (c) 2024, Philip Deegan.
+Copyright (c) 2025, Philip Deegan.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -66,6 +66,7 @@ struct TypeDAO
     using value_type                         = T;
     using impl_type                          = Impl;
     using array_t                            = typename Impl::internal_type;
+
 
     TypeDAO() noexcept = default;
 
@@ -231,12 +232,13 @@ struct Type : public SuperType<T, SIZE>
     using Super      = SuperType<T, SIZE>;
     using value_type = typename Super::value_type;
     using array_t    = typename Super::array_t;
+    // using vector_t    = typename Super::vector_t;
 
     auto constexpr static add_func_ptr = Type_<T, SIZE>::add_func_ptr;
     auto constexpr static sub_func_ptr = Type_<T, SIZE>::sub_func_ptr;
     auto constexpr static mul_func_ptr = Type_<T, SIZE>::mul_func_ptr;
     auto constexpr static div_func_ptr = Type_<T, SIZE>::div_func_ptr;
-    // auto constexpr static fma_func_ptr = Type_<T, SIZE>::fma_func_ptr;
+
 
     Type() noexcept = default;
 
@@ -277,11 +279,13 @@ Type<T, SIZE> operator/(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
     return {Type<T, SIZE>::Super::impl_type::div_func_ptr(a(), b())};
 }
 
+
 template<typename T, std::size_t SIZE>
 void operator+=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
 {
     a() = Type<T, SIZE>::add_func_ptr(a(), b());
 }
+
 
 template<typename T, std::size_t SIZE>
 void operator-=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
@@ -289,17 +293,20 @@ void operator-=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
     a() = Type<T, SIZE>::sub_func_ptr(a(), b());
 }
 
+
 template<typename T, std::size_t SIZE>
 void operator*=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
 {
     a() = Type<T, SIZE>::mul_func_ptr(a(), b());
 }
 
+
 template<typename T, std::size_t SIZE>
 void operator/=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
 {
     a() = Type<T, SIZE>::div_func_ptr(a(), b());
 }
+
 
 template<typename T, std::size_t SIZE>
 Type<T, SIZE> fma(Type<T, SIZE> const& a, Type<T, SIZE> const& b, Type<T, SIZE> const& c) noexcept

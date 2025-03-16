@@ -1,5 +1,5 @@
 /**
-Copyright (c) 2024, Philip Deegan.
+Copyright (c) 2025, Philip Deegan.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -34,6 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "mkn/avx/def.hpp"
 #include "mkn/avx/types.hpp"
 
+#include "mkn/kul/log.hpp"
 #include "mkn/kul/span.hpp"
 
 #include <array>
@@ -48,11 +49,13 @@ namespace mkn::avx
 {
 
 
+
 template<typename T, std::size_t _N = Options::N<T>()>
 class Span
 {
 protected:
     using R = std::decay_t<T>;
+
 
 private:
     template<typename, std::size_t>
@@ -60,7 +63,7 @@ private:
 
 public:
     using value_type        = T;
-    auto constexpr static N = Options::N<R>();
+    auto constexpr static N = _N;
     using AVX_t             = mkn::avx::Type<R, N>;
 
 protected:
@@ -77,7 +80,7 @@ public:
 
 
     template<typename T0, typename T1>
-    void add(Span<T0> const& a, Span<T1> const& b) noexcept
+    void add(Span<T0, N> const& a, Span<T1, N> const& b) noexcept
     {
         auto const& [v0, v1, v2] = cast(*this, a, b);
         v0[0]                    = v1[0] + v2[0];
@@ -274,7 +277,7 @@ public:
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] = v1[i] + v2[i];
         for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
-            span[i] = a.span[i] + b.span[i];
+            (*this)[i] = a[i] + b[i];
     }
 
 
@@ -286,7 +289,7 @@ public:
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] = v1[i] - v2[i];
         for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
-            span[i] = a.span[i] - b.span[i];
+            (*this)[i] = a[i] - b[i];
     }
 
 
@@ -299,7 +302,7 @@ public:
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] = v1[i] * v2[i];
         for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
-            span[i] = a.span[i] * b.span[i];
+            (*this)[i] = a[i] * b[i];
     }
 
 
@@ -311,7 +314,7 @@ public:
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] = v1[i] / v2[i];
         for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
-            span[i] = a.span[i] / b.span[i];
+            (*this)[i] = a[i] / b[i];
     }
 
     template<typename T0, typename T1, typename T2>
@@ -334,7 +337,7 @@ public:
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] += v1[i];
         for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
-            span[i] += that.span[i];
+            (*this)[i] += that[i];
     }
     template<template<typename, std::size_t> typename Arr, typename T0>
     void operator+=(Arr<T0, N> const& arr) noexcept
@@ -349,6 +352,8 @@ public:
         std::fill(scratch.begin(), scratch.end(), val);
         (*this) += scratch;
     }
+
+
 
     template<typename T0>
     void operator-=(SpanSet<T0, N> const& that) noexcept
@@ -367,6 +372,11 @@ public:
         auto const& [v0, v1] = cast(*this, that);
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] -= v1[0];
+    }
+    void operator-=(T const& val) noexcept
+    {
+        std::fill(scratch.begin(), scratch.end(), val);
+        (*this) -= scratch;
     }
 
 
@@ -393,6 +403,7 @@ public:
         (*this) *= scratch;
     }
 
+
     template<typename T0>
     void operator/=(SpanSet<T0, N> const& that) noexcept
     {
@@ -416,6 +427,7 @@ public:
         (*this) /= scratch;
     }
 
+
     template<typename T0>
     auto& operator=(T0 const& that) noexcept
     {
@@ -432,7 +444,7 @@ public:
     bool operator==(SpanSet<T0, N> const& that) const noexcept
     {
         for (std::size_t i = 0; i < size(); ++i)
-            if (span[i] != that.span[i])
+            if ((*this)[i] != that[i])
                 return false;
         return true;
     }
@@ -440,10 +452,11 @@ public:
     bool operator==(T const t) const noexcept
     {
         for (std::size_t i = 0; i < size(); ++i)
-            if (span[i] != t)
+            if ((*this)[i] != t)
                 return false;
         return true;
     }
+
 
     auto& size() const noexcept { return span.size(); }
 
@@ -451,6 +464,7 @@ public:
     Super const& super() const { return *this; }
     auto& operator*() { return super(); }
     auto& operator*() const { return super(); }
+
 
 protected:
     auto modulo_leftover_idx(auto const siz) { return siz - siz % N; }
@@ -496,7 +510,14 @@ auto make_span(Container const& container, auto const start, auto const size) no
 }
 
 
+template<typename... Containers>
+auto make_spans(Containers&&... containers)
+{
+    return std::make_tuple(make_span(containers)...);
+}
 
-} // namespace mkn::avx
+
+} /* namespace mkn::avx */
+
 
 #endif /* _MKN_AVX_SPAN_HPP_ */
