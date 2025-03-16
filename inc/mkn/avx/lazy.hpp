@@ -44,7 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace mkn::avx
 {
 
-template<typename T, typename Small = std::uint8_t /* use std::uint16_t for printing */>
+template<typename T, typename Small = std::uint16_t>
 struct LazyOp
 {
     LazyOp(T* _a, T const* _b, std::size_t const& _op)
@@ -119,8 +119,8 @@ struct LazyEvaluator
 {
     using Vec_t             = typename LazyVal_t::value_type;
     using T                 = typename Vec_t::value_type;
-    using Span_t            = mkn::avx::Span<T>;
-    using Span_ct           = mkn::avx::Span<T const>;
+    using Span_t            = mkn::avx::SpanSet<T>;
+    using Span_ct           = mkn::avx::SpanSet<T const>;
     auto constexpr static N = mkn::avx::Options::N<T>(); // max vector size
 
     LazyEvaluator(LazyVal_t& _t)
