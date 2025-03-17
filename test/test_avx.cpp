@@ -140,7 +140,6 @@ void test()
 int main() noexcept
 {
     std::cout << __FILE__ << std::endl;
-
     test<float>();
     test<double>();
 

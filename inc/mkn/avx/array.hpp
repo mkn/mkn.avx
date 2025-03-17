@@ -42,7 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace mkn::avx::detail
 {
-template<typename T, std::size_t N, std::size_t A = Options::ALIGN_AS>
+template<typename T, std::size_t N, std::size_t A = Options::ALIGN()>
 struct _A_
 {
     using arr_t = std::array<T, N>;

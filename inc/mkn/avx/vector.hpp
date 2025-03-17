@@ -58,7 +58,7 @@ struct _V_
 namespace mkn::avx
 {
 
-template<typename T, typename Allocator = kul::AlignedAllocator<T, 32>>
+template<typename T, typename Allocator = kul::AlignedAllocator<T, Options::ALIGN()>>
 class Vector : public detail::_V_<T, Allocator>, public SpanSet<T>
 {
     using This      = Vector<T, Allocator>;
