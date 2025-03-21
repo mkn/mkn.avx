@@ -32,10 +32,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _MKN_AVX_HPP_
 
 #include "mkn/avx/def.hpp"
+#include "mkn/avx/span.hpp"
 #include "mkn/avx/array.hpp"
 #include "mkn/avx/types.hpp"
-#include "mkn/avx/span.hpp"
-#include "mkn/avx/vector.hpp"
 
 
 

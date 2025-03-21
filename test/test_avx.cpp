@@ -1,6 +1,7 @@
 
 #include "mkn/avx.hpp"
 #include "mkn/kul/log.hpp"
+#include "mkn/avx/vector.hpp"
 
 #include <cmath>
 #include <cassert>
@@ -36,21 +37,12 @@ void array()
 }
 
 
-template<typename T>
-void vec()
-{
-    mkn::avx::Vector<T> a(103, 2), b(103, 3);
 
-    a += b;
-    a *= b;
-
-    assert(a == 15);
-}
 
 template<typename T>
 void span()
 {
-    using Vec = typename mkn::avx::Vector<T>::Vec::vec_t;
+    using Vec = mkn::avx::Vector_t<T>;
     Vec v0(103, 2);
     auto a = mkn::avx::make_span(v0);
 
@@ -71,7 +63,7 @@ template<typename T>
 void arr()
 {
     using Array_t    = mkn::avx::Array<T, mkn::avx::Options::N<T>()>;
-    using Vec        = typename mkn::avx::Vector<T>::Vec::vec_t;
+    using Vec        = mkn::avx::Vector_t<T>;
     constexpr auto N = mkn::avx::Span<T>::N;
     {
         Array_t b;
@@ -133,7 +125,6 @@ template<typename T>
 void test()
 {
     array<T>();
-    vec<T>();
     span<T>();
     arr<T>();
 }

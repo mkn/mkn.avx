@@ -1,5 +1,5 @@
 /**
-Copyright (c) 2024, Philip Deegan.
+Copyright (c) 2025, Philip Deegan.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -31,96 +31,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MKN_AVX_VECTOR_HPP_
 #define _MKN_AVX_VECTOR_HPP_
 
-#include "mkn/avx/def.hpp"
-#include "mkn/avx/span.hpp"
 #include "mkn/kul/alloc.hpp"
 
 #include <vector>
-#include <optional>
-
-namespace mkn::avx::detail
-{
-template<typename T, typename Allocator_>
-struct _V_
-{
-    using Allocator = Allocator_;
-    using vec_t     = std::vector<T, Allocator>;
-
-    _V_(std::size_t s, T val = 0)
-        : vec(s, val)
-    {
-    }
-
-    vec_t vec;
-};
-} // namespace mkn::avx::detail
 
 namespace mkn::avx
 {
 
-template<typename T, typename Allocator = kul::AlignedAllocator<T, Options::ALIGN()>>
-class Vector : public detail::_V_<T, Allocator>, public SpanSet<T>
-{
-    using This      = Vector<T, Allocator>;
-    using SpanSet_t = SpanSet<T>;
-    using SpanSet_t::modulo_leftover_idx;
+template<typename T, typename Allocator = kul::AlignedAllocator<T, 32>>
+using Vector_t = std::vector<T, Allocator>;
 
 
-public:
-    auto constexpr static N = Options::N<T>();
-    using Vec               = detail::_V_<T, Allocator>;
-    using Vec::vec;
-
-    Vector(std::size_t s = 0, T val = 0)
-        : Vec(s, val)
-        , SpanSet_t{Vec::vec.data(), Vec::vec.size()}
-    {
-    }
-
-
-    auto operator+(This const& that) noexcept
-    {
-        using AVX_t = typename SpanSet_t::AVX_t;
-
-        assert(this->size() >= that.size());
-
-        Vector<T> r(this->size());
-
-        auto& v0 = *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&(*this)());
-        auto& v1 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&that());
-        auto& r0 = *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&r());
-
-        for (std::size_t i = 0; i < this->size() / N; ++i)
-            r0[i] = v0[i] + v1[i];
-
-        for (std::size_t i = modulo_leftover_idx(); i < this->size(); ++i)
-            r[i] = (*this)[i] + that[i];
-
-        return r;
-    }
-
-    auto operator*(This const& that) noexcept
-    {
-        using AVX_t = typename SpanSet_t::AVX_t;
-
-        assert(this->size() >= that.size());
-
-        Vector<T> r(this->size());
-
-        auto& v0 = *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&(*this)());
-        auto& v1 = *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&that());
-        auto& r0 = *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&r());
-
-        for (std::size_t i = 0; i < this->size() / N; ++i)
-            r0[i] = v0[i] * v1[i];
-
-        for (std::size_t i = modulo_leftover_idx(); i < this->size(); ++i)
-            r[i] = (*this)[i] * that[i];
-
-        return r;
-    }
-};
-
-} /* namespace mkn::avx */
+} // namespace mkn::avx
 
 #endif /* _MKN_AVX_VECTOR_HPP_ */

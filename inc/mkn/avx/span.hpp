@@ -511,6 +511,11 @@ auto make_span(Container const& container, auto const start, auto const size) no
     return SpanSet<typename Container::value_type const>{container.data() + start, size};
 }
 
+template<typename... Containers>
+auto make_spans(Containers&&... containers)
+{
+    return std::make_tuple(make_span(containers, 0, containers.size())...);
+}
 
 
 } // namespace mkn::avx

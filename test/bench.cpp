@@ -1,14 +1,15 @@
 
-#include <cmath>
-#include <array>
-#include <cassert>
 
-#include "mkn/kul/log.hpp"
 
 #include "mkn/avx.hpp"
+#include "mkn/kul/log.hpp"
 #include "mkn/avx/vector.hpp"
 
 #include "benchmark/benchmark.h"
+
+#include <cmath>
+#include <array>
+#include <cassert>
 
 std::size_t constexpr SIZE = 1e6;
 
@@ -93,7 +94,9 @@ void mul_no_avx_inplace(benchmark::State& state)
 template<typename T>
 void mul_avx(benchmark::State& state)
 {
-    mkn::avx::Vector<T> a(SIZE, 2), b(SIZE, 2), c(SIZE);
+    mkn::avx::Vector_t<T> v0(SIZE, 2), v1(SIZE, 2), v2(SIZE);
+    auto [a, b, c] = mkn::avx::make_spans(v0, v1, v2);
+
     for (auto _ : state)
         c.mul(a, b);
 }
@@ -102,7 +105,8 @@ void mul_avx(benchmark::State& state)
 template<typename T>
 void mul_avx_inplace(benchmark::State& state)
 {
-    mkn::avx::Vector<T> a(SIZE, 2), b(SIZE, 2);
+    mkn::avx::Vector_t<T> v0(SIZE, 2), v1(SIZE, 2);
+    auto [a, b] = mkn::avx::make_spans(v0, v1);
     for (auto _ : state)
         a *= b;
 }
@@ -111,7 +115,8 @@ void mul_avx_inplace(benchmark::State& state)
 template<typename T>
 void mul_avx_inplace_single(benchmark::State& state)
 {
-    mkn::avx::Vector<T> a(SIZE, 2);
+    mkn::avx::Vector_t<T> v0(SIZE, 2);
+    auto [a] = mkn::avx::make_spans(v0);
     for (auto _ : state)
         a *= 2;
 }
@@ -122,10 +127,11 @@ void mul_avx_inplace_array(benchmark::State& state)
 {
     constexpr auto N = mkn::avx::Span<T>::N;
 
-    mkn::avx::Vector<T> a(SIZE, 2);
+    mkn::avx::Vector_t<T> v0(SIZE, 2);
     std::array<T, N> b;
     std::fill(b.begin(), b.end(), 2);
 
+    auto [a] = mkn::avx::make_spans(v0);
     for (auto _ : state)
         a *= b;
 }
@@ -134,7 +140,8 @@ void mul_avx_inplace_array(benchmark::State& state)
 template<typename T>
 void add_avx_inplace(benchmark::State& state)
 {
-    mkn::avx::Vector<T> a(SIZE, 2), b(SIZE, 2);
+    mkn::avx::Vector_t<T> v0(SIZE, 2), v1(SIZE, 2);
+    auto [a, b] = mkn::avx::make_spans(v0, v1);
     for (auto _ : state)
         a += b;
 }
@@ -143,7 +150,8 @@ void add_avx_inplace(benchmark::State& state)
 template<typename T>
 void add_avx_inplace_single(benchmark::State& state)
 {
-    mkn::avx::Vector<T> a(SIZE, 2);
+    mkn::avx::Vector_t<T> v0(SIZE, 2);
+    auto [a] = mkn::avx::make_spans(v0);
     for (auto _ : state)
         a += 2;
 }
