@@ -38,6 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <array>
 #include <cstdint>
+#include <optional>
 
 
 namespace mkn::avx::detail
@@ -48,7 +49,7 @@ struct _A_
     using arr_t = std::array<T, N>;
 
     // _A_() {}
-    _A_(T const val = 0) { arr.fill(val); }
+    // _A_(T const val = 0) { store(float); }
 
     alignas(A) arr_t arr;
 };
@@ -69,40 +70,47 @@ public:
     using Arr = detail::_A_<T, N>;
     using Arr::arr;
 
-    Array()
+
+    Array(std::nullopt_t const) // no default value!
         : Arr{}
         , Span_t{arr.data(), arr.size()}
     {
     }
 
-    Array(T const val)
-        : Arr{val}
+    Array(T const val = 0)
+        : Arr{}
         , Span_t{arr.data(), arr.size()}
     {
+        **this = val;
     }
 
     Array(Array const& that)
-        : Arr{that}
+        : Arr{}
         , Span_t{arr.data(), arr.size()}
     {
+        **this = *that;
+    }
+    Array(Array&& that)
+        : Arr{}
+        , Span_t{arr.data(), arr.size()}
+    {
+        **this = *that;
     }
 
-    template<typename T0>
-    Array& operator=(Array<T0, N> const& that)
+    Array& operator=(Array const& that)
     {
-        arr = that.arr;
+        **this = *that;
         return *this;
     };
-    Array& operator=(T const& that)
-    {
-        arr.fill(that);
-        return *this;
-    };
+    // Array& operator=(T const& that)
+    // {
+    //     arr.fill(that);
+    //     return *this;
+    // };
 
-    template<typename T0>
-    Array& operator=(Array<T0, N>&& that)
+    Array& operator=(Array&& that)
     {
-        arr = that.arr;
+        **this = *that;
         return *this;
     };
 

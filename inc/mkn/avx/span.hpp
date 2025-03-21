@@ -69,6 +69,9 @@ protected:
     {
     }
 
+    Span(Span const&) = delete;
+    Span(Span&&)      = delete;
+
 public:
     Span(T* d) noexcept
         : span{d, 1}
@@ -164,12 +167,25 @@ public:
         v0[0] *= v1[0];
     }
 
+    auto& operator=(Span const& that) noexcept
+    {
+        auto const& [v1] = cast(that);
+        store(data(), v1[0]);
+        return *this;
+    }
+
+    auto& operator=(T const& v) noexcept
+    {
+        auto const& [v0] = cast(*this);
+        store(v0[0], v);
+        return *this;
+    }
 
     template<typename T0>
     auto& operator=(T0 const& that) noexcept
     {
-        static_assert(std::is_same_v<R, std::decay_t<typename T0::value_type>>);
-        std::memcpy(data(), that.data(), sizeof(T) * N);
+        auto const& [v1] = cast(that);
+        store(data(), v1[0]);
         return *this;
     }
 

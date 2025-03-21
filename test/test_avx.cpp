@@ -1,10 +1,8 @@
 
-#include "mkn/kul/log.hpp"
-#include "mkn/kul/assert.hpp"
-
 #include "mkn/avx.hpp"
+#include "mkn/kul/log.hpp"
 
-
+#include <cmath>
 #include <cassert>
 #include <iostream>
 
@@ -15,14 +13,14 @@ void array()
     using Array_t = mkn::avx::Array<T, mkn::avx::Options::N<T>()>;
     Array_t a{1}, b{2};
 
-    mkn::kul::abort_if_not(a == 1);
-    mkn::kul::abort_if_not(b == 2);
+    assert(a == 1);
+    assert(b == 2);
 
     a += b;
-    mkn::kul::abort_if_not(a == 3);
+    assert(a == 3);
 
     a *= b;
-    mkn::kul::abort_if_not(a == 6);
+    assert(a == 6);
 
     auto const c = []() {
         Array_t t1{2};
@@ -31,7 +29,10 @@ void array()
     }();
 
     a *= c;
-    mkn::kul::abort_if_not(a == 18);
+    assert(a == 18);
+
+    b = a;
+    assert(b == 18);
 }
 
 
@@ -143,5 +144,9 @@ int main() noexcept
     test<float>();
     test<double>();
 
+    for (auto const& [k, v] : mkn::avx::Counter::I().cnts)
+    {
+        KLOG(INF) << k << " " << v;
+    }
     return 0;
 }
