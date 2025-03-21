@@ -22,5 +22,10 @@ Description     activate AVX512
 
 Key             MKN_AVX_ALIGN_AS
 Type            int
-Default         32
-Description     default alignas / allocation alignment
+Default         undefined
+Description     compile time override if defined
+                  otherwise
+                    64 for avx512
+                    32 for avx2
+                    16 for avx1
+                    8 for anything else

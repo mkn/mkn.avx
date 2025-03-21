@@ -31,16 +31,20 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MKN_AVX_TYPES_HPP_
 #define _MKN_AVX_TYPES_HPP_
 
-#include <utility>
 
 #include "mkn/avx/def.hpp"
+#include "mkn/avx/dbg.hpp"
 
+#include <cstdint>
+#include <utility>
 
 namespace mkn::avx
 {
 template<typename T, std::size_t SIZE>
 struct Type_
 {
+    static_assert(SIZE == 1); // otherwise missing impl
+
     using internal_type = T;
 
     // default operations without avx
@@ -48,6 +52,10 @@ struct Type_
     auto constexpr static sub_func_ptr = [](auto& a, auto& b) { return a - b; };
     auto constexpr static mul_func_ptr = [](auto& a, auto& b) { return a * b; };
     auto constexpr static div_func_ptr = [](auto& a, auto& b) { return a / b; };
+    auto constexpr static set_func_ptr = [](auto a, auto& b) { return (*a) = b; };
+
+    auto constexpr static set_v_func_ptr = [](auto& b) { return b; };
+
     auto constexpr static fma_func_ptr = [](auto& a, auto& b, auto& c) { return a * b + c; };
 };
 
@@ -69,7 +77,6 @@ struct TypeDAO
 
     TypeDAO() noexcept = default;
 
-
     template<typename Y = T, typename = std::enable_if_t<!std::is_same_v<Y, array_t>>>
     TypeDAO(value_type val) noexcept
         : array{Type_set(*this, val)}
@@ -82,8 +89,10 @@ struct TypeDAO
 
     auto& operator[](std::size_t i) noexcept { return reinterpret_cast<T*>(&array)[i]; }
     auto& operator[](std::size_t i) const noexcept { return array[i]; }
-    auto& operator()() noexcept { return array; }
-    auto& operator()() const noexcept { return array; }
+    inline auto& operator()() noexcept { return array; }
+    inline auto& operator()() const noexcept { return array; }
+    inline auto data() { return array.data(); }
+    inline auto data() const { return array.data(); }
 
     array_t array;
 };
@@ -93,33 +102,40 @@ struct TypeDAO
 template<>
 struct Type_<double, 2>
 {
-    using internal_type                = __m128d;
-    auto constexpr static add_func_ptr = &_mm_add_pd;
-    auto constexpr static sub_func_ptr = &_mm_sub_pd;
-    auto constexpr static mul_func_ptr = &_mm_mul_pd;
-    auto constexpr static div_func_ptr = &_mm_div_pd;
-    auto constexpr static fma_func_ptr = &_mm_fmadd_pd;
+    using internal_type                  = __m128d;
+    auto constexpr static add_func_ptr   = &_mm_add_pd;
+    auto constexpr static sub_func_ptr   = &_mm_sub_pd;
+    auto constexpr static mul_func_ptr   = &_mm_mul_pd;
+    auto constexpr static div_func_ptr   = &_mm_div_pd;
+    auto constexpr static set_func_ptr   = &_mm_store_pd;
+    auto constexpr static set_v_func_ptr = &_mm_set1_pd;
+    auto constexpr static fma_func_ptr   = &_mm_fmadd_pd;
 };
 
 template<>
 struct Type_<double, 4>
 {
-    using internal_type                = __m256d;
-    auto constexpr static add_func_ptr = &_mm256_add_pd;
-    auto constexpr static sub_func_ptr = &_mm256_sub_pd;
-    auto constexpr static mul_func_ptr = &_mm256_mul_pd;
-    auto constexpr static div_func_ptr = &_mm256_div_pd;
+    using internal_type                  = __m256d;
+    auto constexpr static add_func_ptr   = &_mm256_add_pd;
+    auto constexpr static sub_func_ptr   = &_mm256_sub_pd;
+    auto constexpr static mul_func_ptr   = &_mm256_mul_pd;
+    auto constexpr static div_func_ptr   = &_mm256_div_pd;
+    auto constexpr static set_func_ptr   = &_mm256_store_pd;
+    auto constexpr static set_v_func_ptr = &_mm256_set1_pd;
+
     auto constexpr static fma_func_ptr = &_mm256_fmadd_pd;
 };
 
 template<>
 struct Type_<double, 8>
 {
-    using internal_type                = __m512d;
-    auto constexpr static add_func_ptr = &_mm512_add_pd;
-    auto constexpr static sub_func_ptr = &_mm512_sub_pd;
-    auto constexpr static mul_func_ptr = &_mm512_mul_pd;
-    auto constexpr static div_func_ptr = &_mm512_div_pd;
+    using internal_type                  = __m512d;
+    auto constexpr static add_func_ptr   = &_mm512_add_pd;
+    auto constexpr static sub_func_ptr   = &_mm512_sub_pd;
+    auto constexpr static mul_func_ptr   = &_mm512_mul_pd;
+    auto constexpr static div_func_ptr   = &_mm512_div_pd;
+    auto constexpr static set_func_ptr   = &_mm512_store_pd;
+    auto constexpr static set_v_func_ptr = &_mm512_set1_pd;
     // auto constexpr static fma_func_ptr = &_mm256_fmadd_pd;
 };
 //////////////////// double ////////////////////
@@ -131,24 +147,42 @@ struct Type_<double, 8>
 template<>
 struct Type_<float, 4>
 {
-    using internal_type                = __m128;
-    auto constexpr static add_func_ptr = &_mm_add_ps;
-    auto constexpr static sub_func_ptr = &_mm_sub_ps;
-    auto constexpr static mul_func_ptr = &_mm_mul_ps;
-    auto constexpr static div_func_ptr = &_mm_div_ps;
-    auto constexpr static fma_func_ptr = &_mm_fmadd_ps;
+    using internal_type                  = __m128;
+    auto constexpr static add_func_ptr   = &_mm_add_ps;
+    auto constexpr static sub_func_ptr   = &_mm_sub_ps;
+    auto constexpr static mul_func_ptr   = &_mm_mul_ps;
+    auto constexpr static div_func_ptr   = &_mm_div_ps;
+    auto constexpr static set_func_ptr   = &_mm_store_ps;
+    auto constexpr static set_v_func_ptr = &_mm_set1_ps;
+    auto constexpr static fma_func_ptr   = &_mm_fmadd_ps;
 };
 
 template<>
 struct Type_<float, 8>
 {
-    using internal_type                = __m256;
-    auto constexpr static add_func_ptr = &_mm256_add_ps;
-    auto constexpr static sub_func_ptr = &_mm256_sub_ps;
-    auto constexpr static mul_func_ptr = &_mm256_mul_ps;
-    auto constexpr static div_func_ptr = &_mm256_div_ps;
-    auto constexpr static fma_func_ptr = &_mm256_fmadd_ps;
+    using internal_type                  = __m256;
+    auto constexpr static add_func_ptr   = &_mm256_add_ps;
+    auto constexpr static sub_func_ptr   = &_mm256_sub_ps;
+    auto constexpr static mul_func_ptr   = &_mm256_mul_ps;
+    auto constexpr static div_func_ptr   = &_mm256_div_ps;
+    auto constexpr static set_func_ptr   = &_mm256_store_ps;
+    auto constexpr static set_v_func_ptr = &_mm256_set1_ps;
+    auto constexpr static fma_func_ptr   = &_mm256_fmadd_ps;
 };
+
+template<>
+struct Type_<float, 16>
+{
+    using internal_type                  = __m512;
+    auto constexpr static add_func_ptr   = &_mm512_add_ps;
+    auto constexpr static sub_func_ptr   = &_mm512_sub_ps;
+    auto constexpr static mul_func_ptr   = &_mm512_mul_ps;
+    auto constexpr static div_func_ptr   = &_mm512_div_ps;
+    auto constexpr static set_func_ptr   = &_mm512_store_ps;
+    auto constexpr static set_v_func_ptr = &_mm512_set1_ps;
+    auto constexpr static fma_func_ptr   = &_mm512_fmadd_ps;
+};
+
 //////////////////// float ////////////////////
 
 
@@ -232,10 +266,12 @@ struct Type : public SuperType<T, SIZE>
     using value_type = typename Super::value_type;
     using array_t    = typename Super::array_t;
 
-    auto constexpr static add_func_ptr = Type_<T, SIZE>::add_func_ptr;
-    auto constexpr static sub_func_ptr = Type_<T, SIZE>::sub_func_ptr;
-    auto constexpr static mul_func_ptr = Type_<T, SIZE>::mul_func_ptr;
-    auto constexpr static div_func_ptr = Type_<T, SIZE>::div_func_ptr;
+    auto constexpr static add_func_ptr   = Type_<T, SIZE>::add_func_ptr;
+    auto constexpr static sub_func_ptr   = Type_<T, SIZE>::sub_func_ptr;
+    auto constexpr static mul_func_ptr   = Type_<T, SIZE>::mul_func_ptr;
+    auto constexpr static div_func_ptr   = Type_<T, SIZE>::div_func_ptr;
+    auto constexpr static set_func_ptr   = Type_<T, SIZE>::set_func_ptr;
+    auto constexpr static set_v_func_ptr = Type_<T, SIZE>::set_v_func_ptr;
     // auto constexpr static fma_func_ptr = Type_<T, SIZE>::fma_func_ptr;
 
     Type() noexcept = default;
@@ -254,52 +290,76 @@ struct Type : public SuperType<T, SIZE>
 };
 
 template<typename T, std::size_t SIZE>
-Type<T, SIZE> operator+(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
+Type<T, SIZE> inline operator+(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
 {
+    MKN_AVX_FN_COUNTER;
     return {Type<T, SIZE>::add_func_ptr(a(), b())};
 }
 
 template<typename T, std::size_t SIZE>
-Type<T, SIZE> operator-(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
+Type<T, SIZE> inline operator-(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
 {
+    MKN_AVX_FN_COUNTER;
     return {Type<T, SIZE>::Super::impl_type::sub_func_ptr(a(), b())};
 }
 
 template<typename T, std::size_t SIZE>
-Type<T, SIZE> operator*(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
+Type<T, SIZE> inline operator*(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
 {
+    MKN_AVX_FN_COUNTER;
     return {Type<T, SIZE>::mul_func_ptr(a(), b())};
 }
 
 template<typename T, std::size_t SIZE>
-Type<T, SIZE> operator/(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
+Type<T, SIZE> inline operator/(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
 {
+    MKN_AVX_FN_COUNTER;
     return {Type<T, SIZE>::Super::impl_type::div_func_ptr(a(), b())};
 }
 
 template<typename T, std::size_t SIZE>
-void operator+=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
+void inline operator+=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
 {
+    MKN_AVX_FN_COUNTER;
     a() = Type<T, SIZE>::add_func_ptr(a(), b());
 }
 
 template<typename T, std::size_t SIZE>
-void operator-=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
+void inline operator-=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
 {
+    MKN_AVX_FN_COUNTER;
     a() = Type<T, SIZE>::sub_func_ptr(a(), b());
 }
 
 template<typename T, std::size_t SIZE>
-void operator*=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
+void inline operator*=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
 {
+    MKN_AVX_FN_COUNTER;
     a() = Type<T, SIZE>::mul_func_ptr(a(), b());
 }
 
 template<typename T, std::size_t SIZE>
-void operator/=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
+void inline operator/=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
 {
+    MKN_AVX_FN_COUNTER;
     a() = Type<T, SIZE>::div_func_ptr(a(), b());
 }
+
+
+template<typename T, std::size_t SIZE>
+void inline store(T* a, Type<T, SIZE> const& b) noexcept
+{
+    MKN_AVX_FN_COUNTER;
+    Type<T, SIZE>::set_func_ptr(a, b());
+}
+
+template<typename T, std::size_t SIZE>
+void inline store(Type<T, SIZE>& a, T const& b) noexcept
+{
+    MKN_AVX_FN_COUNTER;
+    a() = Type<T, SIZE>::set_v_func_ptr(b);
+}
+
 
 template<typename T, std::size_t SIZE>
 Type<T, SIZE> fma(Type<T, SIZE> const& a, Type<T, SIZE> const& b, Type<T, SIZE> const& c) noexcept
@@ -319,5 +379,8 @@ Type<T, SIZE> fma(Type<T, SIZE> const& a, Type<T, SIZE> const& b, Type<T, SIZE> 
 // }
 
 // } /* namespace std */
+
+
+
 
 #endif /* _MKN_AVX_TYPES_HPP_ */

@@ -67,18 +67,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 
-#if !defined(MKN_AVX_ALIGN_AS)
-#define MKN_AVX_ALIGN_AS 32
-#endif
-
 namespace mkn::avx
 {
 struct Options
 {
-    bool static constexpr AVX               = MKN_AVX_1_ACTIVE;
-    bool static constexpr AVX2              = MKN_AVX_2_ACTIVE;
-    bool static constexpr AVX512            = MKN_AVX_512_ACTIVE;
-    std::uint16_t static constexpr ALIGN_AS = MKN_AVX_ALIGN_AS;
+    bool static constexpr AVX    = MKN_AVX_1_ACTIVE;
+    bool static constexpr AVX2   = MKN_AVX_2_ACTIVE;
+    bool static constexpr AVX512 = MKN_AVX_512_ACTIVE;
 
     template<typename AT, std::uint16_t operands = 1>
     std::uint16_t static constexpr N()
@@ -92,6 +87,22 @@ struct Options
             return 128 / 8 / sizeof(T) / operands;
         else
             return 1;
+    }
+
+    std::uint16_t static constexpr ALIGN()
+    {
+#if defined(MKN_AVX_ALIGN_AS)
+        return MKN_AVX_ALIGN_AS;
+#endif
+
+        if constexpr (AVX512)
+            return 64;
+        else if constexpr (AVX2)
+            return 32;
+        else if constexpr (AVX)
+            return 16;
+        else
+            return 8;
     }
 };
 
