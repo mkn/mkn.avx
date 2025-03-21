@@ -31,6 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MKN_AVX_VECTOR_HPP_
 #define _MKN_AVX_VECTOR_HPP_
 
+#include "mkn/avx/def.hpp"
 #include "mkn/kul/alloc.hpp"
 
 #include <vector>
@@ -38,7 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace mkn::avx
 {
 
-template<typename T, typename Allocator = kul::AlignedAllocator<T, 32>>
+template<typename T, typename Allocator = kul::AlignedAllocator<T, Options::ALIGN()>>
 using Vector_t = std::vector<T, Allocator>;
 
 

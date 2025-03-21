@@ -193,11 +193,11 @@ BENCHMARK_TEMPLATE(add_avx_inplace_single, float)->Unit(benchmark::kMicrosecond)
 //////////////////////////////////////////////////////////////////////////////
 
 
-BENCHMARK_TEMPLATE(mul_avx_inplace, std::uint32_t)->Unit(benchmark::kMicrosecond);
-BENCHMARK_TEMPLATE(mul_avx_inplace_array, std::uint32_t)->Unit(benchmark::kMicrosecond);
-BENCHMARK_TEMPLATE(mul_avx_inplace_single, std::uint32_t)->Unit(benchmark::kMicrosecond);
-BENCHMARK_TEMPLATE(add_avx_inplace, std::uint32_t)->Unit(benchmark::kMicrosecond);
-BENCHMARK_TEMPLATE(add_avx_inplace_single, std::uint32_t)->Unit(benchmark::kMicrosecond);
+// BENCHMARK_TEMPLATE(mul_avx_inplace, std::uint32_t)->Unit(benchmark::kMicrosecond);
+// BENCHMARK_TEMPLATE(mul_avx_inplace_array, std::uint32_t)->Unit(benchmark::kMicrosecond);
+// BENCHMARK_TEMPLATE(mul_avx_inplace_single, std::uint32_t)->Unit(benchmark::kMicrosecond);
+// BENCHMARK_TEMPLATE(add_avx_inplace, std::uint32_t)->Unit(benchmark::kMicrosecond);
+// BENCHMARK_TEMPLATE(add_avx_inplace_single, std::uint32_t)->Unit(benchmark::kMicrosecond);
 
 
 //////////////////////////////////////////////////////////////////////////////

@@ -69,8 +69,8 @@ protected:
     {
     }
 
-    Span(Span const&) = delete;
-    Span(Span&&)      = delete;
+    // Span(Span const&) = delete;
+    // Span(Span&&)      = delete;
 
 public:
     Span(T* d) noexcept
@@ -474,7 +474,7 @@ protected:
 
 
 private:
-    alignas((Options::ALIGN())) std::array<T, N> scratch{};
+    alignas(Options::ALIGN()) std::array<T, N> scratch{};
 };
 
 
@@ -514,7 +514,7 @@ auto make_span(Container const& container, auto const start, auto const size) no
 template<typename... Containers>
 auto make_spans(Containers&&... containers)
 {
-    return std::make_tuple(make_span(containers, 0, containers.size())...);
+    return std::make_tuple(make_span(containers)...);
 }
 
 
