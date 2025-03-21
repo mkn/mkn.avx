@@ -102,25 +102,26 @@ struct TypeDAO
 template<>
 struct Type_<double, 2>
 {
-    using internal_type                = __m128d;
-    auto constexpr static add_func_ptr = &_mm_add_pd;
-    auto constexpr static sub_func_ptr = &_mm_sub_pd;
-    auto constexpr static mul_func_ptr = &_mm_mul_pd;
-    auto constexpr static div_func_ptr = &_mm_div_pd;
-    auto constexpr static set_func_ptr = &_mm_store_pd;
-    auto constexpr static fma_func_ptr = &_mm_fmadd_pd;
+    using internal_type                  = __m128d;
+    auto constexpr static add_func_ptr   = &_mm_add_pd;
+    auto constexpr static sub_func_ptr   = &_mm_sub_pd;
+    auto constexpr static mul_func_ptr   = &_mm_mul_pd;
+    auto constexpr static div_func_ptr   = &_mm_div_pd;
+    auto constexpr static set_func_ptr   = &_mm_store_pd;
+    auto constexpr static set_v_func_ptr = &_mm_set1_pd;
+    auto constexpr static fma_func_ptr   = &_mm_fmadd_pd;
 };
 
 template<>
 struct Type_<double, 4>
 {
-    using internal_type                = __m256d;
-    auto constexpr static add_func_ptr = &_mm256_add_pd;
-    auto constexpr static sub_func_ptr = &_mm256_sub_pd;
-    auto constexpr static mul_func_ptr = &_mm256_mul_pd;
-    auto constexpr static div_func_ptr = &_mm256_div_pd;
-
-    auto constexpr static set_func_ptr = &_mm256_store_pd;
+    using internal_type                  = __m256d;
+    auto constexpr static add_func_ptr   = &_mm256_add_pd;
+    auto constexpr static sub_func_ptr   = &_mm256_sub_pd;
+    auto constexpr static mul_func_ptr   = &_mm256_mul_pd;
+    auto constexpr static div_func_ptr   = &_mm256_div_pd;
+    auto constexpr static set_func_ptr   = &_mm256_store_pd;
+    auto constexpr static set_v_func_ptr = &_mm256_set1_pd;
 
     auto constexpr static fma_func_ptr = &_mm256_fmadd_pd;
 };
@@ -146,25 +147,27 @@ struct Type_<double, 8>
 template<>
 struct Type_<float, 4>
 {
-    using internal_type                = __m128;
-    auto constexpr static add_func_ptr = &_mm_add_ps;
-    auto constexpr static sub_func_ptr = &_mm_sub_ps;
-    auto constexpr static mul_func_ptr = &_mm_mul_ps;
-    auto constexpr static div_func_ptr = &_mm_div_ps;
-    auto constexpr static set_func_ptr = &_mm_store_ps;
-    auto constexpr static fma_func_ptr = &_mm_fmadd_ps;
+    using internal_type                  = __m128;
+    auto constexpr static add_func_ptr   = &_mm_add_ps;
+    auto constexpr static sub_func_ptr   = &_mm_sub_ps;
+    auto constexpr static mul_func_ptr   = &_mm_mul_ps;
+    auto constexpr static div_func_ptr   = &_mm_div_ps;
+    auto constexpr static set_func_ptr   = &_mm_store_ps;
+    auto constexpr static set_v_func_ptr = &_mm_set1_ps;
+    auto constexpr static fma_func_ptr   = &_mm_fmadd_ps;
 };
 
 template<>
 struct Type_<float, 8>
 {
-    using internal_type                = __m256;
-    auto constexpr static add_func_ptr = &_mm256_add_ps;
-    auto constexpr static sub_func_ptr = &_mm256_sub_ps;
-    auto constexpr static mul_func_ptr = &_mm256_mul_ps;
-    auto constexpr static div_func_ptr = &_mm256_div_ps;
-    auto constexpr static set_func_ptr = &_mm256_store_ps;
-    auto constexpr static fma_func_ptr = &_mm256_fmadd_ps;
+    using internal_type                  = __m256;
+    auto constexpr static add_func_ptr   = &_mm256_add_ps;
+    auto constexpr static sub_func_ptr   = &_mm256_sub_ps;
+    auto constexpr static mul_func_ptr   = &_mm256_mul_ps;
+    auto constexpr static div_func_ptr   = &_mm256_div_ps;
+    auto constexpr static set_func_ptr   = &_mm256_store_ps;
+    auto constexpr static set_v_func_ptr = &_mm256_set1_ps;
+    auto constexpr static fma_func_ptr   = &_mm256_fmadd_ps;
 };
 
 template<>
