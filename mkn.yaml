@@ -14,7 +14,18 @@ profile:
   test: test/test_(\w).cpp
   mode: none
 
-- name: bench
+- name: b0
+  parent: headers
+  main: test/betterbench.cpp
+  mode: none
+
+- name: b1
+  parent: headers
+  main: test/betterbench.cpp
+  arg: -DMKN_AVX_BENCH_AVX_N
+  mode: none
+
+- name: gbench
   parent: headers
   dep: google.benchmark
   main: test/bench.cpp

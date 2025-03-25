@@ -28,40 +28,54 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-#ifndef _MKN_AVX_HPP_
-#define _MKN_AVX_HPP_
+#ifndef _MKN_AVX_DBG_HPP_
+#define _MKN_AVX_DBG_HPP_
 
 #include "mkn/avx/def.hpp"
-#include "mkn/avx/span.hpp"
-#include "mkn/avx/array.hpp"
-#include "mkn/avx/types.hpp"
+
+#include <string>
+#include <sstream>
+#include <unordered_map>
 
 
+namespace mkn::avx
+{
+struct Counter
+{
+    static auto& I()
+    {
+        static Counter i;
+        return i;
+    }
 
-#if 0 // sample code
-
-#include "mkn/avx.hpp"
-#include "mkn/kul/log.hpp"
-#include <cstdlib> // for abort
-
-int main(){
-
-    std::size_t constexpr SIZE = 1e6;
-
-    mkn::avx::Vector_t<float> v0(SIZE, 1), v1(SIZE, 2);
-    auto&& [a, b] = mkn::avx::make_spans(v0, v1);
-
-    a += b;
-
-    for(std::size_t i = 0; i < SIZE; ++i)
-        if(a[i] != 3) std::abort();
-
-    KOUT(NON) << __FILE__;
-    return 0;
-}
+    void operator()(auto&&... args) { ++cnts[format(args...)]; }
 
 
-#endif
+    static auto format(auto&&... args)
+    {
+        std::stringstream ss;
+        ((ss << args << ":"), ...);
+        return ss.str();
+    }
 
+    std::unordered_map<std::string, std::size_t> cnts;
+};
 
-#endif /* _MKN_AVX_HPP_ */
+struct CountPoint
+{
+    CountPoint(auto&&... args) { Counter::I().cnts[Counter::format(args...)] = 0; }
+};
+
+} // namespace mkn::avx
+
+#if defined(MKN_AVX_COUNT_FNS)
+#define MKN_AVX_FN_COUNTER                                                                         \
+    static mkn::avx::CountPoint __mkn_avx_count_point##__LINE__{__FILE__, __func__, __LINE__};     \
+    mkn::avx::Counter::I()(__FILE__, __func__, __LINE__);
+
+#else // !defined(MKN_AVX_FN_COUNTER)
+#define MKN_AVX_FN_COUNTER
+
+#endif // MKN_AVX_FN_COUNTER
+
+#endif /* _MKN_AVX_DBG_HPP_ */

@@ -351,14 +351,14 @@ void exec(LazyVal_t const& t, T* const ret){
 };
 
 template<typename T>
-auto eval(LazyVal<T>& v, bool in_place = false)
+auto eval(LazyVal<T>& v, bool /*in_place*/ = false)
 {
     auto ret = v();
     LazyEvaluator<LazyVal<T>>{v}(ret.data());
     return ret;
 }
 template<typename T>
-auto eval(LazyVal<T>&& v, bool in_place = false)
+auto eval(LazyVal<T>&& v, bool /*in_place*/ = false)
 {
     auto ret = v();
     LazyEvaluator<LazyVal<T>>{v}(ret.data());

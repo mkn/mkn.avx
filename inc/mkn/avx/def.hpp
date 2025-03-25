@@ -78,6 +78,10 @@ struct Options
     template<typename AT, std::uint16_t operands = 1>
     std::uint16_t static constexpr N()
     {
+#if defined(MKN_AVX_FORCE_N)
+        return MKN_AVX_FORCE_N;
+#endif
+
         using T = std::decay_t<AT>;
         if constexpr (AVX512)
             return 512 / 8 / sizeof(T) / operands;

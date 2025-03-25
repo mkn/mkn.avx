@@ -38,6 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <array>
 #include <cstdint>
+#include <optional>
 
 
 namespace mkn::avx::detail
@@ -46,9 +47,6 @@ template<typename T, std::size_t N, std::size_t A = Options::ALIGN()>
 struct _A_
 {
     using arr_t = std::array<T, N>;
-
-    // _A_() {}
-    _A_(T const val = 0) { arr.fill(val); }
 
     alignas(A) arr_t arr;
 };
@@ -69,40 +67,47 @@ public:
     using Arr = detail::_A_<T, N>;
     using Arr::arr;
 
-    Array()
+
+    Array(std::nullopt_t const) // no default value!
         : Arr{}
         , Span_t{arr.data(), arr.size()}
     {
     }
 
-    Array(T const val)
-        : Arr{val}
+    Array(T const val = 0)
+        : Arr{}
         , Span_t{arr.data(), arr.size()}
     {
+        **this = val;
     }
 
     Array(Array const& that)
-        : Arr{that}
+        : Arr{}
         , Span_t{arr.data(), arr.size()}
     {
+        **this = *that;
+    }
+    Array(Array&& that)
+        : Arr{}
+        , Span_t{arr.data(), arr.size()}
+    {
+        **this = *that;
     }
 
-    template<typename T0>
-    Array& operator=(Array<T0, N> const& that)
+    Array& operator=(Array const& that)
     {
-        arr = that.arr;
+        **this = *that;
         return *this;
     };
-    Array& operator=(T const& that)
-    {
-        arr.fill(that);
-        return *this;
-    };
+    // Array& operator=(T const& that)
+    // {
+    //     arr.fill(that);
+    //     return *this;
+    // };
 
-    template<typename T0>
-    Array& operator=(Array<T0, N>&& that)
+    Array& operator=(Array&& that)
     {
-        arr = that.arr;
+        **this = *that;
         return *this;
     };
 
@@ -110,13 +115,13 @@ public:
 
 
     template<typename T0>
-    auto operator+(Array<T0, N> const& arr) const
+    auto inline operator+(Array<T0, N> const& arr) const
     {
         Array ret{};
         ret.add(*this, arr);
         return ret;
     }
-    auto operator+(Arr::arr_t const& arr) const
+    auto inline operator+(Arr::arr_t const& arr) const
     {
         Array ret{};
         ret.add(*this, make_span<N>(arr));
@@ -124,13 +129,13 @@ public:
     }
 
     template<typename T0>
-    auto operator-(Array<T0, N> const& arr) const
+    auto inline operator-(Array<T0, N> const& arr) const
     {
         Array ret{};
         ret.sub(*this, arr);
         return ret;
     }
-    auto operator-(Arr::arr_t const& arr) const
+    auto inline operator-(Arr::arr_t const& arr) const
     {
         Array ret{};
         ret.sub(*this, make_span(arr));
@@ -138,13 +143,13 @@ public:
     }
 
     template<typename T0>
-    auto operator*(Array<T0, N> const& arr) const
+    auto inline operator*(Array<T0, N> const& arr) const
     {
         Array ret{};
         ret.mul(*this, arr);
         return ret;
     }
-    auto operator*(Arr::arr_t const& arr) const
+    auto inline operator*(Arr::arr_t const& arr) const
     {
         Array ret{};
         ret.mul(*this, make_span(arr));
@@ -152,13 +157,13 @@ public:
     }
 
     template<typename T0>
-    auto operator/(Array<T0, N> const& arr) const
+    auto inline operator/(Array<T0, N> const& arr) const
     {
         Array ret{};
         ret.div(*this, arr);
         return ret;
     }
-    auto operator/(Arr::arr_t const& arr) const
+    auto inline operator/(Arr::arr_t const& arr) const
     {
         Array ret{};
         ret.div(*this, make_span(arr));
@@ -197,17 +202,30 @@ public:
 
 
 template<typename T0, typename T1, std::size_t N>
-auto operator+(mkn::avx::Span<T0> const& span, mkn::avx::Array<T1, N> const& arr)
+auto inline operator+(mkn::avx::Span<T0, N> const& __restrict span,
+                      mkn::avx::Span<T1, N> const& __restrict arr)
 {
-    mkn::avx::Array<std::decay_t<T1>, N> ret{};
-    ret.add(span, arr);
+    mkn::avx::Array<std::decay_t<T1>, N> ret{std::nullopt};
+    *ret = span;
+    ret += arr;
     return ret;
 }
 
 template<typename T0, typename T1, std::size_t N>
-auto operator-(T0 const t0, mkn::avx::Array<T1, N> const& arr)
+auto inline operator-(T0 const t0, mkn::avx::Array<T1, N> const& arr)
 {
     return mkn::avx::Array<std::decay_t<T1>, N>{t0} - arr;
+}
+
+
+template<typename T0, typename T1, std::size_t N>
+auto inline operator*(mkn::avx::Span<T0, N> const& __restrict s0,
+                      mkn::avx::Span<T1, N> const& __restrict s1)
+{
+    mkn::avx::Array<T1, N> ret{std::nullopt};
+    *ret = s0;
+    ret *= s1;
+    return ret;
 }
 
 

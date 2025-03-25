@@ -64,20 +64,48 @@ public:
     using AVX_t             = mkn::avx::Type<R, N>;
 
 protected:
+    union U
+    {
+        T* arr;
+        mkn::avx::Type<R, N>* i;
+
+        auto data() { return arr; }
+        auto data() const { return arr; }
+        auto constexpr static size() { return N; }
+    };
+
+    U u;
+
+    auto& avx() { return u.i; }
+    auto& avx() const { return u.i; }
+
     Span(T* d, std::size_t const s) noexcept
-        : span{d, s}
+        : u{d}
+        , span{d, s}
     {
     }
 
 public:
-    Span(T* d) noexcept
-        : span{d, 1}
+    inline Span(T* d) noexcept
+        : u{d}
+        , span{d, 1}
+    {
+    }
+    inline Span(Span const& that)
+        : u{that.u}
+        , span{that.span}
+    {
+    }
+
+    inline Span(Span&& that)
+        : u{that.u}
+        , span{that.span}
     {
     }
 
 
     template<typename T0, typename T1>
-    void add(Span<T0, N> const& a, Span<T1, N> const& b) noexcept
+    void inline add(Span<T0, N> const& a, Span<T1, N> const& b) noexcept
     {
         auto const& [v0, v1, v2] = cast(*this, a, b);
         v0[0]                    = v1[0] + v2[0];
@@ -85,7 +113,7 @@ public:
 
 
     template<typename T0, typename T1>
-    void sub(Span<T0, N> const& a, Span<T1, N> const& b) noexcept
+    void inline sub(Span<T0, N> const& a, Span<T1, N> const& b) noexcept
     {
         auto const& [v0, v1, v2] = cast(*this, a, b);
         v0[0]                    = v1[0] - v2[0];
@@ -93,7 +121,7 @@ public:
 
 
     template<typename T0, typename T1>
-    void mul(Span<T0, N> const& a, Span<T1, N> const& b) noexcept
+    void inline mul(Span<T0, N> const& a, Span<T1, N> const& b) noexcept
     {
         auto const& [v0, v1, v2] = cast(*this, a, b);
         v0[0]                    = v1[0] * v2[0];
@@ -101,7 +129,7 @@ public:
 
 
     template<typename T0, typename T1>
-    void div(Span<T0, N> const& a, Span<T1, N> const& b) noexcept
+    void inline div(Span<T0, N> const& a, Span<T1, N> const& b) noexcept
     {
         auto const& [v0, v1, v2] = cast(*this, a, b);
         v0[0]                    = v1[0] / v2[0];
@@ -118,14 +146,15 @@ public:
 
 
     template<typename T0>
-    void operator+=(Span<T0, N> const& that) noexcept
+    auto inline operator+=(Span<T0, N> const& that) noexcept
     {
-        auto const& [v0, v1] = cast(*this, that);
-        v0[0] += v1[0];
+        // auto const& [v0, v1] = cast(*this, that);
+        // v0[0] += v1[0];
+        **this += *that;
     }
 
     template<typename T0>
-    void operator+=(std::array<T0, N> const& arr) noexcept
+    auto inline operator+=(std::array<T0, N> const& arr) noexcept
     {
         Span<T0 const> that{arr};
         auto const& [v0, v1] = cast(*this, that);
@@ -135,14 +164,14 @@ public:
 
 
     template<typename T0>
-    void operator-=(Span<T0, N> const& that) noexcept
+    auto inline operator-=(Span<T0, N> const& that) noexcept
     {
         auto const& [v0, v1] = cast(*this, that);
         v0[0] -= v1[0];
     }
 
     template<typename T0>
-    void operator-=(std::array<T0, N> const& arr) noexcept
+    auto inline operator-=(std::array<T0, N> const& arr) noexcept
     {
         Span<T0 const> that{arr};
         auto const& [v0, v1] = cast(*this, that);
@@ -150,26 +179,48 @@ public:
     }
 
     template<typename T0>
-    void operator*=(Span<T0, N> const& that) noexcept
+    auto inline operator*=(Span<T0, N> const& that) noexcept
     {
-        auto const& [v0, v1] = cast(*this, that);
-        v0[0] *= v1[0];
+        // auto const& [v0, v1] = cast(*this, that);
+        // v0[0] *= v1[0];
+        **this *= *that;
     }
 
     template<typename T0>
-    void operator*=(std::array<T0, N> const& arr) noexcept
+    auto inline operator*=(std::array<T0, N> const& arr) noexcept
     {
         Span<T0 const> that{arr};
         auto const& [v0, v1] = cast(*this, that);
         v0[0] *= v1[0];
     }
 
+    auto& operator=(Span const& that) noexcept
+    {
+        auto const& [v1] = cast(that);
+        store(data(), v1[0]);
+        return *this;
+    }
+
+    auto& operator=(T const& v) noexcept
+    {
+        auto const& [v0] = cast(*this);
+        store(v0[0], v);
+        return *this;
+    }
 
     template<typename T0>
     auto& operator=(T0 const& that) noexcept
     {
-        static_assert(std::is_same_v<R, std::decay_t<typename T0::value_type>>);
-        std::memcpy(data(), that.data(), sizeof(T) * N);
+        if constexpr (mkn::kul::is_span_like_v<T0>)
+        {
+            auto const& [v1] = cast(that);
+            store(data(), v1[0]);
+        }
+        else
+        {
+            *this = static_cast<T>(that);
+        }
+
         return *this;
     }
 
@@ -178,7 +229,7 @@ public:
 
 
     template<typename T0>
-    bool operator==(Span<T0, N> const& that) const noexcept
+    bool inline operator==(Span<T0, N> const& that) const noexcept
     {
         for (std::size_t i = 0; i < N; ++i)
             if (span[i] != that.span[i])
@@ -186,7 +237,7 @@ public:
         return true;
     }
 
-    bool operator==(T const t) const noexcept
+    bool inline operator==(T const t) const noexcept
     {
         for (std::size_t i = 0; i < N; ++i)
             if (span[i] != t)
@@ -196,6 +247,7 @@ public:
 
     auto data() const noexcept { return span.data(); }
     auto data() noexcept { return span.data(); }
+    auto static constexpr size() noexcept { return N; }
 
     auto& operator[](std::size_t i) const noexcept { return span[i]; }
     auto& operator[](std::size_t i) noexcept { return span[i]; }
@@ -204,22 +256,25 @@ public:
     auto& operator()() const noexcept { return span; }
 
 protected:
+    auto& operator*() { return *avx(); }
+    auto& operator*() const { return *avx(); }
+
     template<typename T0>
-    static auto& caster(Span<T0, N>& that) noexcept
+    static inline auto& caster(Span<T0, N>& that) noexcept
     {
         static_assert(std::is_same_v<R, typename Span<T0, N>::R>);
-        return *reinterpret_cast<mkn::kul::Span<AVX_t>*>(&that.span);
+        return that.avx();
     }
 
     template<typename T0>
-    static auto& caster(Span<T0, N> const& that) noexcept
+    static inline auto& caster(Span<T0, N> const& that) noexcept
     {
         static_assert(std::is_same_v<R, typename Span<T0, N>::R>);
-        return *reinterpret_cast<mkn::kul::Span<AVX_t> const*>(&that.span);
+        return that.avx();
     }
 
     template<typename... Args>
-    static auto cast(Args&&... args)
+    static inline auto cast(Args&&... args)
     {
         return std::forward_as_tuple(caster(args)...);
     }
@@ -267,7 +322,7 @@ public:
 
 
     template<typename T0, typename T1>
-    void add(SpanSet<T0, N> const& a, SpanSet<T1, N> const& b) noexcept
+    void inline add(SpanSet<T0, N> const& a, SpanSet<T1, N> const& b) noexcept
     {
         auto const& [v0, v1, v2] = cast(*this, a, b);
 
@@ -279,7 +334,7 @@ public:
 
 
     template<typename T0, typename T1>
-    void sub(SpanSet<T0, N> const& a, SpanSet<T1, N> const& b) noexcept
+    void inline sub(SpanSet<T0, N> const& a, SpanSet<T1, N> const& b) noexcept
     {
         auto const& [v0, v1, v2] = cast(*this, a, b);
 
@@ -292,7 +347,7 @@ public:
 
 
     template<typename T0, typename T1>
-    void mul(SpanSet<T0, N> const& a, SpanSet<T1, N> const& b) noexcept
+    void inline mul(SpanSet<T0, N> const& a, SpanSet<T1, N> const& b) noexcept
     {
         auto const& [v0, v1, v2] = cast(*this, a, b);
 
@@ -304,7 +359,7 @@ public:
 
 
     template<typename T0, typename T1>
-    void div(SpanSet<T0, N> const& a, SpanSet<T1, N> const& b) noexcept
+    void inline div(SpanSet<T0, N> const& a, SpanSet<T1, N> const& b) noexcept
     {
         auto const& [v0, v1, v2] = cast(*this, a, b);
 
@@ -315,7 +370,8 @@ public:
     }
 
     template<typename T0, typename T1, typename T2>
-    void fma(SpanSet<T0, N> const& a, SpanSet<T1, N> const& b, SpanSet<T2, N> const& c) noexcept
+    void inline fma(SpanSet<T0, N> const& a, SpanSet<T1, N> const& b,
+                    SpanSet<T2, N> const& c) noexcept
     {
         auto const& [v0, v1, v2, v3] = cast(*this, a, b, c);
 
@@ -328,7 +384,7 @@ public:
 
 
     template<typename T0>
-    void operator+=(SpanSet<T0, N> const& that) noexcept
+    auto inline operator+=(SpanSet<T0, N> const& that) noexcept
     {
         auto const& [v0, v1] = cast(*this, that);
         for (std::size_t i = 0; i < size() / N; ++i)
@@ -337,21 +393,21 @@ public:
             span[i] += that.span[i];
     }
     template<template<typename, std::size_t> typename Arr, typename T0>
-    void operator+=(Arr<T0, N> const& arr) noexcept
+    auto inline operator+=(Arr<T0, N> const& arr) noexcept
     {
         SpanSet<T0 const, N> const that{arr};
         auto const& [v0, v1] = cast(*this, that);
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] += v1[0];
     }
-    void operator+=(T const& val) noexcept
+    auto inline operator+=(T const& val) noexcept
     {
         std::fill(scratch.begin(), scratch.end(), val);
         (*this) += scratch;
     }
 
     template<typename T0>
-    void operator-=(SpanSet<T0, N> const& that) noexcept
+    auto inline operator-=(SpanSet<T0, N> const& that) noexcept
     {
         auto const& [v0, v1] = cast(*this, that);
 
@@ -361,7 +417,7 @@ public:
             (*this)[i] -= that[i];
     }
     template<template<typename, std::size_t> typename Arr, typename T0>
-    void operator-=(Arr<T0, N> const& arr) noexcept
+    auto inline operator-=(Arr<T0, N> const& arr) noexcept
     {
         SpanSet<T0 const, N> const that{arr};
         auto const& [v0, v1] = cast(*this, that);
@@ -371,7 +427,7 @@ public:
 
 
     template<typename T0>
-    void operator*=(SpanSet<T0, N> const& that) noexcept
+    auto inline operator*=(SpanSet<T0, N> const& that) noexcept
     {
         auto const& [v0, v1] = cast(*this, that);
         for (std::size_t i = 0; i < size() / N; ++i)
@@ -380,21 +436,21 @@ public:
             span[i] *= that.span[i];
     }
     template<template<typename, std::size_t> typename Arr, typename T0>
-    void operator*=(Arr<T0, N> const& arr) noexcept
+    auto inline operator*=(Arr<T0, N> const& arr) noexcept
     {
         SpanSet<T0 const, N> const that{arr};
         auto const& [v0, v1] = cast(*this, that);
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] *= v1[0];
     }
-    void operator*=(T const& val) noexcept
+    auto inline operator*=(T const& val) noexcept
     {
         std::fill(scratch.begin(), scratch.end(), val);
         (*this) *= scratch;
     }
 
     template<typename T0>
-    void operator/=(SpanSet<T0, N> const& that) noexcept
+    auto inline operator/=(SpanSet<T0, N> const& that) noexcept
     {
         auto const& [v0, v1] = cast(*this, that);
         for (std::size_t i = 0; i < size() / N; ++i)
@@ -403,14 +459,14 @@ public:
             span[i] /= that.span[i];
     }
     template<template<typename, std::size_t> typename Arr, typename T0>
-    void operator/=(Arr<T0, N> const& arr) noexcept
+    auto inline operator/=(Arr<T0, N> const& arr) noexcept
     {
         SpanSet<T0 const, N> const that{arr};
         auto const& [v0, v1] = cast(*this, that);
         for (std::size_t i = 0; i < size() / N; ++i)
             v0[i] /= v1[0];
     }
-    void operator/=(T const& val) noexcept
+    auto inline operator/=(T const& val) noexcept
     {
         std::fill(scratch.begin(), scratch.end(), val);
         (*this) /= scratch;
@@ -429,7 +485,7 @@ public:
 
 
     template<typename T0>
-    bool operator==(SpanSet<T0, N> const& that) const noexcept
+    bool inline operator==(SpanSet<T0, N> const& that) const noexcept
     {
         for (std::size_t i = 0; i < size(); ++i)
             if (span[i] != that.span[i])
@@ -437,7 +493,7 @@ public:
         return true;
     }
 
-    bool operator==(T const t) const noexcept
+    bool inline operator==(T const t) const noexcept
     {
         for (std::size_t i = 0; i < size(); ++i)
             if (span[i] != t)
@@ -453,24 +509,30 @@ public:
     auto& operator*() const { return super(); }
 
 protected:
-    auto modulo_leftover_idx(auto const siz) { return siz - siz % N; }
-    auto modulo_leftover_idx() { return modulo_leftover_idx(size()); }
+    auto inline modulo_leftover_idx(auto const siz) { return siz - siz % N; }
+    auto inline modulo_leftover_idx() { return modulo_leftover_idx(size()); }
 
 
 private:
-    alignas((Options::ALIGN())) std::array<T, N> scratch{};
+    alignas(Options::ALIGN()) std::array<T, N> scratch{};
 };
 
 
 template<std::size_t N, typename Container>
-auto make_span(Container& container, auto const start = 0) noexcept
+auto inline make_span(Container& container, auto const start = 0) noexcept
 {
-    return Span<typename Container::value_type, N>{container.data() + start};
+    if constexpr (mkn::kul::is_span_like_v<Container>)
+        return Span<typename Container::value_type, N>{container.data() + start};
+    else
+        return Span<std::remove_pointer_t<Container>, N>{container + start};
 }
 template<std::size_t N, typename Container>
-auto make_span(Container const& container, auto const start = 0) noexcept
+auto inline make_span(Container const& container, auto const start = 0) noexcept
 {
-    return Span<typename Container::value_type const, N>{container.data() + start};
+    if constexpr (mkn::kul::is_span_like_v<Container>)
+        return Span<typename Container::value_type const, N>{container.data() + start};
+    else
+        return Span<std::remove_pointer_t<Container> const, N>{container + start};
 }
 
 template<typename Container>
@@ -495,6 +557,25 @@ auto make_span(Container const& container, auto const start, auto const size) no
     return SpanSet<typename Container::value_type const>{container.data() + start, size};
 }
 
+template<std::size_t N, typename... Containers>
+auto inline make_spans(std::size_t start, Containers&&... containers)
+{
+    return std::make_tuple(make_span<N>(containers.data(), start)...);
+}
+
+
+template<std::size_t N, typename... Containers>
+auto inline make_spans(Containers&&... containers)
+{
+    return std::make_tuple(make_span<N>(containers.data())...);
+}
+
+
+template<typename... Containers>
+auto inline make_spans(Containers&&... containers)
+{
+    return std::make_tuple(make_span(containers)...);
+}
 
 
 } // namespace mkn::avx
