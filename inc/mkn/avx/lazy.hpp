@@ -260,7 +260,7 @@ struct LazyEvaluator
 #include <cstdint>
 
 template<typename E>
-using AVXVec = std::vector<E, mkn::kul::AlignedAllocator<E, 32>>;
+using AVXVec = std::vector<E, mkn::kul::AlignedAllocator<E, Options::ALIGN()>>;
 )";
 
         std::string const funcheader = R"(
@@ -346,7 +346,7 @@ void exec(LazyVal_t const& t, T* const ret){
     std::vector<std::string> fn_strs{"add", "sub", "mul", "div"};
 
     template<typename E>
-    using AVXVec = std::vector<E, mkn::kul::AlignedAllocator<E, 32>>;
+    using AVXVec = std::vector<E, mkn::kul::AlignedAllocator<E, Options::ALIGN()>>;
     static inline thread_local AVXVec<std::array<T, N>> tmps{};
 };
 
