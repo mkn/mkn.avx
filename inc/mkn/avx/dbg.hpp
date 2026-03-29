@@ -1,5 +1,5 @@
 /**
-Copyright (c) 2025, Philip Deegan.
+Copyright (c) 2024, Philip Deegan.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -28,41 +28,52 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-#ifndef _MKN_AVX_VECTOR_HPP_
-#define _MKN_AVX_VECTOR_HPP_
+#ifndef _MKN_AVX_DBG_HPP_
+#define _MKN_AVX_DBG_HPP_
 
-#include "mkn/kul/alloc.hpp"
+#include <string>
+#include <sstream>
+#include <unordered_map>
 
-#include "mkn/avx/def.hpp"
-
-#include <vector>
 
 namespace mkn::avx
 {
-
-template<typename T, typename Allocator = kul::AlignedAllocator<T, Options::ALIGN()>>
-using Vector = std::vector<T, Allocator>;
-
-
-template<typename T, std::uint16_t N = 0>
-bool constexpr is_aligned(std::vector<T> const&)
+struct Counter
 {
-    return false;
-}
+    static auto& I()
+    {
+        static Counter i;
+        return i;
+    }
 
-template<typename T, auto N>
-bool constexpr is_aligned(std::vector<T, kul::AlignedAllocator<T, N>> const&)
+    void operator()(auto&&... args) { ++cnts[format(args...)]; }
+
+
+    static auto format(auto&&... args)
+    {
+        std::stringstream ss;
+        ((ss << args << ":"), ...);
+        return ss.str();
+    }
+
+    std::unordered_map<std::string, std::size_t> cnts;
+};
+
+struct CountPoint
 {
-    return true;
-}
-
-template<typename Container>
-bool constexpr is_aligned()
-{
-    return is_aligned(Container{});
-}
-
+    CountPoint(auto&&... args) { Counter::I().cnts[Counter::format(args...)] = 0; }
+};
 
 } // namespace mkn::avx
 
-#endif /* _MKN_AVX_VECTOR_HPP_ */
+#if defined(MKN_AVX_COUNT_FNS)
+#define MKN_AVX_FN_COUNTER                                                                         \
+    static mkn::avx::CountPoint __mkn_avx_count_point##__LINE__{__FILE__, __func__, __LINE__};     \
+    mkn::avx::Counter::I()(__FILE__, __func__, __LINE__);
+
+#else // !defined(MKN_AVX_FN_COUNTER)
+#define MKN_AVX_FN_COUNTER
+
+#endif // MKN_AVX_FN_COUNTER
+
+#endif /* _MKN_AVX_DBG_HPP_ */

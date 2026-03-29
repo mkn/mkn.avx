@@ -1,0 +1,44 @@
+name: build
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  CURL_GET: curl -fL --retry 3 --retry-delay 2
+  PATH_GET: https://github.com/mkn/mkn/releases/download/latest
+
+jobs:
+  ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: "Build/Test"
+      env:
+        MKN_GCC_PREFERRED: 1
+      run: |
+        $CURL_GET -o mkn ${PATH_GET}/mkn_nix
+        chmod +x mkn
+        KLOG=5 ./mkn clean build test run -p test_all,b0,b1 -OtKda "-std=c++20" -l -pthread -g 0
+
+  windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: amd64
+    - name: "Build/Test"
+      shell: cmd
+      env:
+        MKN_CL_PREFERRED: 1
+      run: | # /bin/link interferes with cl/link.exe
+        bash -c "rm /bin/link"
+        bash -c "$CURL_GET -o mkn.exe ${PATH_GET}/mkn.exe"
+        bash -c 'KLOG=3 ./mkn clean build test run -p test_all,b0,b1 -OtKda "-arch:AVX2 -std:c++20" -g 0'

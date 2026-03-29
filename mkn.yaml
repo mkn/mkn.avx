@@ -1,4 +1,4 @@
-#! clean build test -dtKOp test,bench -l -pthread run
+#! clean build test -gdtKOp test,test_lazy,gbench -l -pthread dbg
 # -O >= 3 required for AVX
 
 name: mkn.avx
@@ -9,12 +9,42 @@ profile:
   inc: inc
   dep: mkn.kul
 
+- name: test_all
+  parent: headers
+  test: test/test_(\w*).cpp
+
 - name: test
   parent: headers
-  test: test/test_(\w).cpp
+  main: test/test_avx.cpp
   mode: none
 
-- name: bench
+- name: test_lazy
+  parent: headers
+  main: test/test_lazy.cpp
+  mode: none
+
+- name: test_aligned
+  parent: headers
+  main: test/test_aligned.cpp
+  mode: none
+
+- name: test_unaligned
+  parent: headers
+  main: test/test_unaligned.cpp
+  mode: none
+
+- name: b0
+  parent: headers
+  main: test/betterbench.cpp
+  mode: none
+
+- name: b1
+  parent: headers
+  main: test/betterbench.cpp
+  arg: -DMKN_AVX_BENCH_AVX_N
+  mode: none
+
+- name: gbench
   parent: headers
   dep: google.benchmark
   main: test/bench.cpp
