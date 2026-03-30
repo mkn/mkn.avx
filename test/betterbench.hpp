@@ -1,6 +1,5 @@
 
 
-#include "mkn/kul/dbg.hpp"
 #include "mkn/avx/array.hpp"
 
 #include "mkn/avx.hpp"
@@ -85,7 +84,6 @@ void op(Args&&... args)
 template<typename T>
 void AoS<T>::operator()()
 {
-    MKN_KUL_DBG_FUNC_ENTER;
     if constexpr (std::is_same_v<double, T>)
     {
         for (std::size_t i = 0; i < size(); ++i)
@@ -110,7 +108,6 @@ void AoS<T>::operator()()
 template<typename T, typename V>
 void SoA<T, V>::operator()()
 {
-    MKN_KUL_DBG_FUNC_ENTER;
     if constexpr (std::is_same_v<double, T>)
     {
         for (std::size_t i = 0; i < size(); ++i)

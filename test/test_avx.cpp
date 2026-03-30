@@ -3,7 +3,6 @@
 #include "mkn/kul/assert.hpp"
 
 #include "mkn/avx.hpp"
-#include "mkn/avx/dbg.hpp"
 #include "mkn/avx/array.hpp"
 
 #include <cmath>
@@ -137,9 +136,5 @@ int main() noexcept
     test<float>();
     test<double>();
 
-    for (auto const& [k, v] : mkn::avx::Counter::I().cnts)
-    {
-        KLOG(INF) << k << " " << v;
-    }
     return 0;
 }

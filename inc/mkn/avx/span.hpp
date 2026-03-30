@@ -90,7 +90,7 @@ public:
     {
         auto const& [v0, v1, v2] = cast(*this, a, b);
 
-        for (std::size_t i = 0; i < size() / N; ++i)
+        for (std::size_t i = 0; i < batches(); ++i)
             v0[i] = v1[i] + v2[i];
         for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
             span[i] = a.span[i] + b.span[i];
@@ -102,7 +102,7 @@ public:
     {
         auto const& [v0, v1, v2] = cast(*this, a, b);
 
-        for (std::size_t i = 0; i < size() / N; ++i)
+        for (std::size_t i = 0; i < batches(); ++i)
             v0[i] = v1[i] - v2[i];
         for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
             span[i] = a.span[i] - b.span[i];
@@ -115,7 +115,7 @@ public:
     {
         auto const& [v0, v1, v2] = cast(*this, a, b);
 
-        for (std::size_t i = 0; i < size() / N; ++i)
+        for (std::size_t i = 0; i < batches(); ++i)
             v0[i] = v1[i] * v2[i];
         for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
             span[i] = a.span[i] * b.span[i];
@@ -127,7 +127,7 @@ public:
     {
         auto const& [v0, v1, v2] = cast(*this, a, b);
 
-        for (std::size_t i = 0; i < size() / N; ++i)
+        for (std::size_t i = 0; i < batches(); ++i)
             v0[i] = v1[i] / v2[i];
         for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
             span[i] = a.span[i] / b.span[i];
@@ -138,7 +138,7 @@ public:
     {
         auto const& [v0, v1, v2, v3] = cast(*this, a, b, c);
 
-        for (std::size_t i = 0; i < size() / N; ++i)
+        for (std::size_t i = 0; i < batches(); ++i)
             v0[i] = mkn::avx::fma(v1[i], v2[i], v3[i]);
         for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
             span[i] = a.span[i] * b.span[i] + c.span[i];
@@ -150,7 +150,7 @@ public:
     auto inline operator+=(Span<T0, N> const& that) noexcept
     {
         auto const& [v0, v1] = cast(*this, that);
-        for (std::size_t i = 0; i < size() / N; ++i)
+        for (std::size_t i = 0; i < batches(); ++i)
             v0[i] += v1[i];
         for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
             span[i] += that.span[i];
@@ -160,7 +160,7 @@ public:
     {
         Span<T0 const, N> const that{arr};
         auto const& [v0, v1] = cast(*this, that);
-        for (std::size_t i = 0; i < size() / N; ++i)
+        for (std::size_t i = 0; i < batches(); ++i)
             v0[i] += v1[0];
     }
     auto inline operator+=(T const& val) noexcept
@@ -174,7 +174,7 @@ public:
     {
         auto const& [v0, v1] = cast(*this, that);
 
-        for (std::size_t i = 0; i < size() / N; ++i)
+        for (std::size_t i = 0; i < batches(); ++i)
             v0[i] -= v1[i];
         for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
             (*this)[i] -= that[i];
@@ -184,7 +184,7 @@ public:
     {
         Span<T0 const, N> const that{arr};
         auto const& [v0, v1] = cast(*this, that);
-        for (std::size_t i = 0; i < size() / N; ++i)
+        for (std::size_t i = 0; i < batches(); ++i)
             v0[i] -= v1[0];
     }
 
@@ -193,7 +193,7 @@ public:
     auto inline operator*=(Span<T0, N> const& that) noexcept
     {
         auto const& [v0, v1] = cast(*this, that);
-        for (std::size_t i = 0; i < size() / N; ++i)
+        for (std::size_t i = 0; i < batches(); ++i)
             v0[i] *= v1[i];
         for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
             span[i] *= that.span[i];
@@ -203,7 +203,7 @@ public:
     {
         Span<T0 const, N> const that{arr};
         auto const& [v0, v1] = cast(*this, that);
-        for (std::size_t i = 0; i < size() / N; ++i)
+        for (std::size_t i = 0; i < batches(); ++i)
             v0[i] *= v1[0];
     }
     auto inline operator*=(T const& val) noexcept
@@ -216,7 +216,7 @@ public:
     auto inline operator/=(Span<T0, N> const& that) noexcept
     {
         auto const& [v0, v1] = cast(*this, that);
-        for (std::size_t i = 0; i < size() / N; ++i)
+        for (std::size_t i = 0; i < batches(); ++i)
             v0[i] /= v1[i];
         for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
             span[i] /= that.span[i];
@@ -226,7 +226,7 @@ public:
     {
         Span<T0 const, N> const that{arr};
         auto const& [v0, v1] = cast(*this, that);
-        for (std::size_t i = 0; i < size() / N; ++i)
+        for (std::size_t i = 0; i < batches(); ++i)
             v0[i] /= v1[0];
     }
     auto inline operator/=(T const& val) noexcept
@@ -272,8 +272,9 @@ public:
     auto& operator*() const { return super(); }
 
 protected:
-    auto inline modulo_leftover_idx(auto const siz) { return siz - siz % N; }
-    auto inline modulo_leftover_idx() { return modulo_leftover_idx(size()); }
+    std::size_t batches() const { return size() / N; }
+    auto modulo_leftover_idx(auto const siz) const { return siz - siz % N; }
+    auto modulo_leftover_idx() const { return modulo_leftover_idx(size()); }
 
 
 private:
@@ -285,10 +286,7 @@ template<typename T, std::size_t _N = Options::N<std::decay_t<T>>()>
 class UnSpan : public Span<T, _N>
 {
     using Super = Span<T, _N>;
-    // using Super::span;
-
-    using R = std::decay_t<T>;
-
+    using R     = std::decay_t<T>;
 
 public:
     using Super::N;
@@ -302,7 +300,7 @@ public:
     template<typename T0>
     void inline operator+=(UnSpan<T0, N> const& that) noexcept
     {
-        for (std::size_t i = 0; i < this->size() / N; ++i)
+        for (std::size_t i = 0; i < this->batches(); ++i)
         {
             auto const idx = i * N;
             auto v0        = unaligned_load<R, N>(&this->span[idx]);

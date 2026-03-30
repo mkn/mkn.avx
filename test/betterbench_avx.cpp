@@ -1,8 +1,10 @@
 
+#include "mkn/kul/assert.hpp"
 
+#include "mkn/avx/vector.hpp"
 
 #include "betterbench.hpp"
-#include "mkn/avx/vector.hpp"
+
 #include <stdexcept>
 
 using base_type = double;
@@ -28,33 +30,30 @@ int main(/*int argc, char** argv*/)
     auto const op = [](auto&... args) {
         auto&& [a, b, c, d] = std::forward_as_tuple(args...);
 
-        T const t0 = AVX_t::set_v_func_ptr(2);
+        T const t0 = AVX_t::set_v(2);
 
-        a = AVX_t::set_v_func_ptr(10);
-        c = AVX_t::set_v_func_ptr(400);
+        a = AVX_t::set_v(10);
+        c = AVX_t::set_v(400);
 
-        T const t1 = AVX_t::set_v_func_ptr(2);
-        T const t3 = AVX_t::mul_func_ptr(t0, t1);
-        b          = AVX_t::add_func_ptr(b, t3);
+        T const t1 = AVX_t::set_v(2);
+        T const t3 = AVX_t::mul(t0, t1);
+        b          = AVX_t::add(b, t3);
 
-        c    = AVX_t::add_func_ptr(c, t1);
-        T t4 = AVX_t::set_v_func_ptr(100);
-        t4   = AVX_t::mul_func_ptr(t4, t3); // t4 *= t3;
-        d    = AVX_t::add_func_ptr(a, AVX_t::mul_func_ptr(b, c));
-        d    = AVX_t::add_func_ptr(d, t4); // d += t4;
-        d    = AVX_t::mul_func_ptr(d, a);  // d *= a;
-        d    = AVX_t::mul_func_ptr(d, b);  // d *= b;
-        d    = AVX_t::mul_func_ptr(d, c);  // d *= c;
+        c    = AVX_t::add(c, t1);
+        T t4 = AVX_t::set_v(100);
+        t4   = AVX_t::mul(t4, t3); // t4 *= t3;
+        d    = AVX_t::add(a, AVX_t::mul(b, c));
+        d    = AVX_t::add(d, t4); // d += t4;
+        d    = AVX_t::mul(d, a);  // d *= a;
+        d    = AVX_t::mul(d, b);  // d *= b;
+        d    = AVX_t::mul(d, c);  // d *= c;
     };
 
     std::size_t i = 0;
     {
-        MKN_KUL_DBG_FUNC_ENTER;
-
         for (; i < arrs; ++i)
             op(d0[i](), d1[i](), d2[i](), d3[i]());
     }
 
-    if (d3[arrs - 1][3] != b3)
-        throw std::runtime_error("FAIL!");
+    mkn::kul::abort_if_not(d3[arrs - 1][3] == b3);
 };

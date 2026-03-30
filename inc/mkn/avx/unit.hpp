@@ -200,8 +200,7 @@ public:
 
     auto& operator=(T const& v) noexcept
     {
-        auto const& [v0] = cast(*this);
-        store(v0[0], v);
+        caster(*this)[0] = load<R, N>(v);
         return *this;
     }
 

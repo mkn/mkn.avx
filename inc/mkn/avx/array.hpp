@@ -221,7 +221,7 @@ template<typename T0, typename T1, std::size_t N>
 auto inline operator*(mkn::avx::Unit<T0, N> const& __restrict s0,
                       mkn::avx::Unit<T1, N> const& __restrict s1)
 {
-    mkn::avx::Array<T1, N> ret{std::nullopt};
+    mkn::avx::Array<std::decay_t<T1>, N> ret{std::nullopt};
     *ret = s0;
     ret *= s1;
     return ret;

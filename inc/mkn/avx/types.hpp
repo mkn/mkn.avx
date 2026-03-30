@@ -31,16 +31,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MKN_AVX_TYPES_HPP_
 #define _MKN_AVX_TYPES_HPP_
 
-// #include "mkn/avx/dbg.hpp"
-
 #include <cstdint>
 #include <utility>
 #include <immintrin.h> // avx
-
-
-#if !defined(MKN_AVX_FN_COUNTER)
-#define MKN_AVX_FN_COUNTER // optionally defined in dbg.hpp
-#endif
 
 namespace mkn::avx
 {
@@ -224,7 +217,7 @@ struct Type_<std::int32_t, 4>
 {
     using internal_type          = __m128i;
     auto const static inline add = [](auto&&... v) { return _mm_add_epi32(v...); };
-    auto const static inline mul = [](auto&&... v) { return _mm_mul_epi32(v...); };
+    auto const static inline mul = [](auto&&... v) { return _mm_mullo_epi32(v...); };
     // auto const static inline fma = _mm256_fmadd_ps;
 };
 template<>
@@ -232,7 +225,7 @@ struct Type_<std::int32_t, 8>
 {
     using internal_type          = __m256i;
     auto const static inline add = [](auto&&... v) { return _mm256_add_epi32(v...); };
-    auto const static inline mul = [](auto&&... v) { return _mm256_mul_epi32(v...); };
+    auto const static inline mul = [](auto&&... v) { return _mm256_mullo_epi32(v...); };
     // auto const static inline fma = _mm256_fmadd_ps;
 };
 //////////////////// std::int32_t ////////////////////
@@ -297,95 +290,72 @@ struct UnType : public Type<T, SIZE> // Unaligned flag
 template<typename T, std::size_t SIZE>
 Type<T, SIZE> inline operator+(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
 {
-    MKN_AVX_FN_COUNTER;
     return {Type<T, SIZE>::add(a(), b())};
 }
 
 template<typename T, std::size_t SIZE>
 Type<T, SIZE> inline operator-(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
 {
-    MKN_AVX_FN_COUNTER;
     return {Type<T, SIZE>::Super::impl_type::sub(a(), b())};
 }
 
 template<typename T, std::size_t SIZE>
 Type<T, SIZE> inline operator*(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
 {
-    MKN_AVX_FN_COUNTER;
     return {Type<T, SIZE>::mul(a(), b())};
 }
 
 template<typename T, std::size_t SIZE>
 Type<T, SIZE> inline operator/(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
 {
-    MKN_AVX_FN_COUNTER;
     return {Type<T, SIZE>::Super::impl_type::div(a(), b())};
 }
 
 template<typename T, std::size_t SIZE>
 void inline operator+=(Type<T, SIZE>& __restrict a, Type<T, SIZE> const& __restrict b) noexcept
 {
-    MKN_AVX_FN_COUNTER;
     a() = Type<T, SIZE>::add(a(), b());
 }
 
 template<typename T, std::size_t SIZE>
 void inline operator-=(Type<T, SIZE>& __restrict a, Type<T, SIZE> const& __restrict b) noexcept
 {
-    MKN_AVX_FN_COUNTER;
     a() = Type<T, SIZE>::sub(a(), b());
 }
 
 template<typename T, std::size_t SIZE>
 void inline operator*=(Type<T, SIZE>& __restrict a, Type<T, SIZE> const& __restrict b) noexcept
 {
-    MKN_AVX_FN_COUNTER;
     a() = Type<T, SIZE>::mul(a(), b());
 }
 
 template<typename T, std::size_t SIZE>
 void inline operator/=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
 {
-    MKN_AVX_FN_COUNTER;
     a() = Type<T, SIZE>::div(a(), b());
 }
 
+template<typename T, std::size_t SIZE>
+auto inline load(T const a) noexcept
+{
+    return Type<T, SIZE>::set_v(a);
+}
 
 template<typename T, std::size_t SIZE>
 void inline store(T* __restrict a, Type<T, SIZE> const& __restrict b) noexcept
 {
-    MKN_AVX_FN_COUNTER;
     Type<T, SIZE>::Super::impl_type::store(a, b());
 }
 
 template<typename T, std::size_t SIZE>
-void inline store(Type<T, SIZE>& __restrict a, T const& __restrict b) noexcept
-{
-    MKN_AVX_FN_COUNTER;
-    a() = Type<T, SIZE>::set_v(b);
-}
-
-
-template<typename T, std::size_t SIZE>
-auto inline load(T const* __restrict a, Type<T, SIZE> const& __restrict b) noexcept
-{
-    MKN_AVX_FN_COUNTER;
-    KEXCEPTION("load");
-    // Type<T, SIZE>::load(const_cast<T*>(a), b());
-}
-
-
-template<typename T, std::size_t SIZE>
 Type<T, SIZE> unaligned_load(T const* __restrict a) noexcept
 {
-    MKN_AVX_FN_COUNTER;
-    return Type<T, SIZE>::Super::impl_type::unaligned_load(a /*const_cast<T*>(a)*/);
+    return Type<T, SIZE>::Super::impl_type::unaligned_load(a);
 }
 
 template<typename T, std::size_t SIZE>
 void unaligned_store(T* __restrict a, Type<T, SIZE> const& b) noexcept
 {
-    MKN_AVX_FN_COUNTER;
     Type<T, SIZE>::Super::impl_type::unaligned_store(a, b());
 }
 
@@ -397,8 +367,6 @@ Type<T, SIZE> inline fma(Type<T, SIZE> const& a, Type<T, SIZE> const& b,
 }
 
 } /* namespace mkn::avx */
-
-
 
 
 #endif /* _MKN_AVX_TYPES_HPP_ */

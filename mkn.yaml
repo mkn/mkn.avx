@@ -54,3 +54,8 @@ profile:
   mod: |
     clang.format{init{style: file, types: hpp cpp ipp, paths: .}}
 
+- name: xsimd
+  parent: headers
+  inc: tpp/xsimd/include
+  main: test/compare_xsimd.cpp
+  sub: xsimd&tpp/xsimd(https://github.com/xtensor-stack/xsimd)
