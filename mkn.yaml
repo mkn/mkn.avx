@@ -59,3 +59,8 @@ profile:
   inc: tpp/xsimd/include
   main: test/compare_xsimd.cpp
   sub: xsimd&tpp/xsimd(https://github.com/xtensor-stack/xsimd)
+
+- name: compare_mkn_avx
+  parent: headers
+  main: test/compare_mkn_avx.cpp
+  mode: none

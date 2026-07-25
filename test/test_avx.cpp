@@ -33,8 +33,11 @@ void array()
     a *= c;
     mkn::kul::abort_if_not(a == 18);
 
+    a -= b;
+    mkn::kul::abort_if_not(a == 16);
+
     b = a;
-    mkn::kul::abort_if_not(b == 18);
+    mkn::kul::abort_if_not(b == 16);
 }
 
 
@@ -54,9 +57,9 @@ void span()
     a *= b;
     mkn::kul::abort_if_not(a == 15);
 
-    // a /= b;
-    // a -= b;
-    // mkn::kul::abort_if_not(a == 2);
+    a /= b;
+    a -= b;
+    mkn::kul::abort_if_not(a == 2);
 }
 
 

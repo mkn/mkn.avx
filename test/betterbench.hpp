@@ -1,6 +1,5 @@
 
 
-#include "mkn/avx/array.hpp"
 
 #include "mkn/avx.hpp"
 

@@ -1,9 +1,14 @@
 
+
+
 #include "mkn/kul/assert.hpp"
+
+#if defined(MKN_AVX_BENCH_AVX_N)
+#include "mkn/avx/array.hpp"
+#endif
 
 #include "betterbench.hpp"
 
-#include <stdexcept>
 
 using base_type = double;
 
@@ -26,13 +31,13 @@ int main(/*int argc, char** argv*/)
 
     {
         SoA<MKN_AVX_BENCH_TYPE, base_type> soa{size};
-        assert(soa);
+        mkn::kul::abort_if_not(soa);
         soa();
         mkn::kul::abort_if_not(soa.v3.data()[soa.v3.size() - 1] == b3);
     }
     {
         AoS<base_type> aos{size};
-        assert(aos);
+        mkn::kul::abort_if_not(aos);
         aos();
         mkn::kul::abort_if_not(aos.data()[aos.size() - 1].v3 == b3);
     }

@@ -5,7 +5,6 @@
 
 #include "betterbench.hpp"
 
-#include <stdexcept>
 
 using base_type = double;
 
