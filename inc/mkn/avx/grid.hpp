@@ -40,10 +40,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace mkn::avx
 {
-template<typename T, std::size_t dimension = 1>
-class Grid : public mkn::avx::Span<T>
+// SpanT controls the tail contract for row slices produced while iterating:
+// Span (default) requires every sliced row remainder to divide evenly by N;
+// use AsymmetricGrid (SpanT=AsymmetricSpan) when that cannot be guaranteed.
+template<typename T, std::size_t dimension = 1, template<typename> typename SpanT = Span>
+class Grid : public SpanT<T>
 {
-    using Super                    = mkn::avx::Span<T>;
+    using Super                    = SpanT<T>;
     auto constexpr static is_const = std::is_const_v<T>;
 
     struct NestedGrid
@@ -92,8 +95,8 @@ class Grid : public mkn::avx::Span<T>
                         bool const are_aligned    = is_aligned(p0) and is_aligned(p1);
                         if (are_aligned)
                         {
-                            Span<T> span0{p0, rem_x};
-                            Span<const T> span1{p1, rem_x};
+                            SpanT<T> span0{p0, rem_x};
+                            SpanT<const T> span1{p1, rem_x};
                             span0 *= span1;
                             break;
                         }
@@ -131,8 +134,8 @@ class Grid : public mkn::avx::Span<T>
                         bool const are_aligned    = is_aligned(p0) and is_aligned(p1);
                         if (are_aligned)
                         {
-                            Span<T> span0{p0, rem_x};
-                            Span<T const> span1{p1, rem_x};
+                            SpanT<T> span0{p0, rem_x};
+                            SpanT<T const> span1{p1, rem_x};
                             span0 += span1;
                             break;
                         }
@@ -189,6 +192,10 @@ public:
     std::array<std::size_t, dimension> m_shape;
 };
 
+// safe for any shape - row slices are handled via AsymmetricSpan's leftover pass
+template<typename T, std::size_t dimension = 1>
+using AsymmetricGrid = Grid<T, dimension, AsymmetricSpan>;
+
 } // namespace mkn::avx
 
-#endif /* _MKN_AVX_SPAN_HPP_ */
+#endif /* _MKN_AVX_GRID_HPP_ */
