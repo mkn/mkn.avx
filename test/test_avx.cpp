@@ -48,10 +48,10 @@ void span()
 {
     using Vec = mkn::avx::Vector<T>;
     Vec v0(103, 2);
-    auto a = mkn::avx::make_span(v0);
+    auto a = mkn::avx::make_unknown_size_span(v0);
 
     Vec const v1(103, 3);
-    auto b = mkn::avx::make_span(v1);
+    auto b = mkn::avx::make_unknown_size_span(v1);
 
     a += b;
     a *= b;
