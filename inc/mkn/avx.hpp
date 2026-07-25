@@ -31,12 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MKN_AVX_HPP_
 #define _MKN_AVX_HPP_
 
-#include "mkn/avx/def.hpp"
-#include "mkn/avx/array.hpp"
-#include "mkn/avx/types.hpp"
 #include "mkn/avx/span.hpp"
 #include "mkn/avx/vector.hpp"
-
 
 
 #if 0 // sample code
@@ -49,7 +45,8 @@ int main(){
 
     std::size_t constexpr SIZE = 1e6;
 
-    mkn::avx::Vector<float> a(SIZE, 1), b(SIZE, 2);
+    mkn::avx::Vector<float> v0(SIZE, 1), v1(SIZE, 2);
+    auto&& [a, b] = mkn::avx::make_spans(v0, v1);
 
     a += b;
 
@@ -59,9 +56,58 @@ int main(){
     KOUT(NON) << __FILE__;
     return 0;
 }
+#endif             // sample code
 
 
-#endif
+namespace mkn::avx
+{
+template<std::size_t N, typename Data>
+auto inline make_span(Data* data, auto const start = 0) noexcept
+{
+    return Unit<Data, N>{data + start};
+}
+
+template<std::size_t N, typename Container>
+auto inline make_span(Container& container, auto const start = 0) noexcept
+{
+    return Unit<typename Container::value_type, N>{container.data() + start};
+}
+
+template<typename Container>
+auto make_span(Container& container) noexcept
+{
+    using vt        = Container::value_type;
+    using real_type = std::conditional_t<std::is_const_v<Container>, vt const, vt>;
+    if constexpr (is_aligned<Container>())
+        return Span<real_type>{container};
+    else
+        return UnSpan<real_type>{container};
+}
+
+template<typename Container>
+auto make_span(Container& container, auto const start, auto const size) noexcept
+{
+    return Span<typename Container::value_type>{container.data() + start, size};
+}
+
+template<std::size_t N, typename... Containers>
+auto inline make_spans(std::size_t start, Containers&&... containers)
+{
+    return std::make_tuple(make_span<N>(containers.data(), start)...);
+}
+
+
+template<typename... Containers>
+auto inline make_spans(Containers&&... containers)
+{
+    return std::make_tuple(make_span(containers)...);
+}
+
+
+
+} // namespace mkn::avx
+
+
 
 
 #endif /* _MKN_AVX_HPP_ */

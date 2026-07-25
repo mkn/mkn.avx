@@ -3,9 +3,9 @@
 #include "mkn/kul/assert.hpp"
 
 #include "mkn/avx.hpp"
+#include "mkn/avx/array.hpp"
 
-
-#include <cassert>
+#include <cmath>
 #include <iostream>
 
 
@@ -32,24 +32,21 @@ void array()
 
     a *= c;
     mkn::kul::abort_if_not(a == 18);
+
+    a -= b;
+    mkn::kul::abort_if_not(a == 16);
+
+    b = a;
+    mkn::kul::abort_if_not(b == 16);
 }
 
 
-template<typename T>
-void vec()
-{
-    mkn::avx::Vector<T> a(103, 2), b(103, 3);
 
-    a += b;
-    a *= b;
-
-    assert(a == 15);
-}
 
 template<typename T>
 void span()
 {
-    using Vec = typename mkn::avx::Vector<T>::Vec::vec_t;
+    using Vec = mkn::avx::Vector<T>;
     Vec v0(103, 2);
     auto a = mkn::avx::make_span(v0);
 
@@ -58,11 +55,11 @@ void span()
 
     a += b;
     a *= b;
-    assert(a == 15);
+    mkn::kul::abort_if_not(a == 15);
 
-    // a /= b;
-    // a -= b;
-    // assert(a == 2);
+    a /= b;
+    a -= b;
+    mkn::kul::abort_if_not(a == 2);
 }
 
 
@@ -70,7 +67,7 @@ template<typename T>
 void arr()
 {
     using Array_t    = mkn::avx::Array<T, mkn::avx::Options::N<T>()>;
-    using Vec        = typename mkn::avx::Vector<T>::Vec::vec_t;
+    using Vec        = mkn::avx::Vector<T>;
     constexpr auto N = mkn::avx::Span<T>::N;
     {
         Array_t b;
@@ -84,7 +81,7 @@ void arr()
         a *= b;
 
         for (std::size_t i = 0; i < N; ++i)
-            assert(v0[i] == ((i + 1) + 2) * (i + 2));
+            mkn::kul::abort_if_not(v0[i] == ((i + 1) + 2) * (i + 2));
     }
 
     Vec v0(N * 10, 2);
@@ -94,7 +91,7 @@ void arr()
     std::fill(b.begin(), b.end(), 3);
 
     a *= b;
-    assert(a == 6);
+    mkn::kul::abort_if_not(a == 6);
 }
 
 
@@ -108,7 +105,7 @@ void fma()
     std::vector<AVX> a(SIZE / AVX::value_count, 1);
     for (size_t i = 0; i < SIZE; i++)
     {
-        assert(a[0][i] == 1); // dangeresque
+        mkn::kul::abort_if_not(a[0][i] == 1); // dangeresque
     }
 
     a[1][0] = 2;
@@ -119,10 +116,10 @@ void fma()
     a[2][3] = 3;
 
     auto check = [](auto&& v) {
-        assert(v[0] == (1 * 2) + 3);
-        assert(v[1] == (1 * 1) + 1);
-        assert(v[2] == (1 * 1) + 1);
-        assert(v[3] == (2 * 2) + 3);
+        mkn::kul::abort_if_not(v[0] == (1 * 2) + 3);
+        mkn::kul::abort_if_not(v[1] == (1 * 1) + 1);
+        mkn::kul::abort_if_not(v[2] == (1 * 1) + 1);
+        mkn::kul::abort_if_not(v[3] == (2 * 2) + 3);
     };
 
     check(std::fma(a[0], a[1], a[2]));
@@ -132,7 +129,6 @@ template<typename T>
 void test()
 {
     array<T>();
-    vec<T>();
     span<T>();
     arr<T>();
 }
@@ -140,7 +136,6 @@ void test()
 int main() noexcept
 {
     std::cout << __FILE__ << std::endl;
-
     test<float>();
     test<double>();
 

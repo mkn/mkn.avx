@@ -32,8 +32,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _MKN_AVX_LAZY_HPP_
 
 #include "mkn/kul/io.hpp"
-#include "mkn/kul/log.hpp"
 #include "mkn/kul/alloc.hpp"
+
 #include "mkn/avx/span.hpp"
 
 #include <new>
@@ -119,8 +119,8 @@ struct LazyEvaluator
 {
     using Vec_t             = typename LazyVal_t::value_type;
     using T                 = typename Vec_t::value_type;
-    using Span_t            = mkn::avx::SpanSet<T>;
-    using Span_ct           = mkn::avx::SpanSet<T const>;
+    using Span_t            = mkn::avx::Span<T>;
+    using Span_ct           = mkn::avx::Span<T const>;
     auto constexpr static N = mkn::avx::Options::N<T>(); // max vector size
 
     LazyEvaluator(LazyVal_t& _t)
@@ -260,7 +260,7 @@ struct LazyEvaluator
 #include <cstdint>
 
 template<typename E>
-using AVXVec = std::vector<E, mkn::kul::AlignedAllocator<E, 32>>;
+using AVXVec = std::vector<E, mkn::kul::AlignedAllocator<E, Options::ALIGN()>>;
 )";
 
         std::string const funcheader = R"(
@@ -346,19 +346,19 @@ void exec(LazyVal_t const& t, T* const ret){
     std::vector<std::string> fn_strs{"add", "sub", "mul", "div"};
 
     template<typename E>
-    using AVXVec = std::vector<E, mkn::kul::AlignedAllocator<E, 32>>;
+    using AVXVec = std::vector<E, mkn::kul::AlignedAllocator<E, Options::ALIGN()>>;
     static inline thread_local AVXVec<std::array<T, N>> tmps{};
 };
 
 template<typename T>
-auto eval(LazyVal<T>& v, bool in_place = false)
+auto eval(LazyVal<T>& v, bool /*in_place*/ = false)
 {
     auto ret = v();
     LazyEvaluator<LazyVal<T>>{v}(ret.data());
     return ret;
 }
 template<typename T>
-auto eval(LazyVal<T>&& v, bool in_place = false)
+auto eval(LazyVal<T>&& v, bool /*in_place*/ = false)
 {
     auto ret = v();
     LazyEvaluator<LazyVal<T>>{v}(ret.data());

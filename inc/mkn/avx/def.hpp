@@ -31,6 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MKN_AVX_DEF_HPP_
 #define _MKN_AVX_DEF_HPP_
 
+#include "mkn/kul/alloc.hpp"
+#include "mkn/kul/except.hpp"
 
 #include <cassert>
 #include <cstdint>
@@ -67,33 +69,77 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 
-#if !defined(MKN_AVX_ALIGN_AS)
-#define MKN_AVX_ALIGN_AS 32
-#endif
-
 namespace mkn::avx
 {
+class Exception : public kul::Exception
+{
+public:
+    Exception(char const* f, uint16_t const& l, std::string const& s)
+        : kul::Exception(f, l, s)
+    {
+    }
+};
+
 struct Options
 {
-    bool static constexpr AVX               = MKN_AVX_1_ACTIVE;
-    bool static constexpr AVX2              = MKN_AVX_2_ACTIVE;
-    bool static constexpr AVX512            = MKN_AVX_512_ACTIVE;
-    std::uint16_t static constexpr ALIGN_AS = MKN_AVX_ALIGN_AS;
+    bool static constexpr AVX    = MKN_AVX_1_ACTIVE;
+    bool static constexpr AVX2   = MKN_AVX_2_ACTIVE;
+    bool static constexpr AVX512 = MKN_AVX_512_ACTIVE;
 
-    template<typename AT, std::uint16_t operands = 1>
+    template<typename AT>
     std::uint16_t static constexpr N()
     {
+#if defined(MKN_AVX_FORCE_N)
+        return MKN_AVX_FORCE_N;
+#endif
+
         using T = std::decay_t<AT>;
         if constexpr (AVX512)
-            return 512 / 8 / sizeof(T) / operands;
+            return 512 / 8 / sizeof(T);
         else if constexpr (AVX2)
-            return 256 / 8 / sizeof(T) / operands;
+            return 256 / 8 / sizeof(T);
         else if constexpr (AVX)
-            return 128 / 8 / sizeof(T) / operands;
+            return 128 / 8 / sizeof(T);
         else
             return 1;
     }
+
+    std::uint16_t static constexpr ALIGN()
+    {
+#if defined(MKN_AVX_ALIGN_AS)
+        return MKN_AVX_ALIGN_AS;
+#endif
+
+        if constexpr (AVX512)
+            return 64;
+        else if constexpr (AVX2)
+            return 32;
+        else if constexpr (AVX)
+            return 16;
+        else
+            return 8;
+    }
 };
+
+template<typename T, std::uint16_t N>
+struct is_aligned_allocator : std::false_type
+{
+};
+template<typename T, std::uint16_t N>
+struct is_aligned_allocator<kul::AlignedAllocator<T, N>, N> : std::true_type
+{
+};
+
+template<typename T, std::uint16_t N>
+inline constexpr auto is_aligned_allocator_v = is_aligned_allocator<T, N>::value;
+
+
+
+template<typename T, std::uint16_t ALIGN = Options::ALIGN()>
+bool is_aligned_pointer(T* t)
+{
+    return (0 == (((std::size_t)(t)) % ALIGN));
+}
 
 
 } /* namespace mkn::avx */
