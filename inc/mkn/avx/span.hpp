@@ -46,7 +46,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace mkn::avx
 {
 
-
+// contract: size() is an exact multiple of N - no remainder/tail handling.
+// callers that cannot guarantee this must use AsymmetricSpan instead.
 template<typename T, std::size_t _N = Options::N<T>()>
 class Span : public Unit<T, _N>
 {
@@ -55,6 +56,8 @@ class Span : public Unit<T, _N>
 
     template<typename, std::size_t>
     friend class Span;
+    template<typename, std::size_t>
+    friend class AsymmetricSpan;
 
 protected:
     using Super::cast;
@@ -89,11 +92,8 @@ public:
     void inline add(Span<T0, N> const& a, Span<T1, N> const& b) noexcept
     {
         auto const& [v0, v1, v2] = cast(*this, a, b);
-
         for (std::size_t i = 0; i < batches(); ++i)
             v0[i] = v1[i] + v2[i];
-        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
-            span[i] = a.span[i] + b.span[i];
     }
 
 
@@ -101,11 +101,8 @@ public:
     void inline sub(Span<T0, N> const& a, Span<T1, N> const& b) noexcept
     {
         auto const& [v0, v1, v2] = cast(*this, a, b);
-
         for (std::size_t i = 0; i < batches(); ++i)
             v0[i] = v1[i] - v2[i];
-        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
-            span[i] = a.span[i] - b.span[i];
     }
 
 
@@ -114,11 +111,8 @@ public:
     void inline mul(Span<T0, N> const& a, Span<T1, N> const& b) noexcept
     {
         auto const& [v0, v1, v2] = cast(*this, a, b);
-
         for (std::size_t i = 0; i < batches(); ++i)
             v0[i] = v1[i] * v2[i];
-        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
-            span[i] = a.span[i] * b.span[i];
     }
 
 
@@ -126,22 +120,16 @@ public:
     void inline div(Span<T0, N> const& a, Span<T1, N> const& b) noexcept
     {
         auto const& [v0, v1, v2] = cast(*this, a, b);
-
         for (std::size_t i = 0; i < batches(); ++i)
             v0[i] = v1[i] / v2[i];
-        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
-            span[i] = a.span[i] / b.span[i];
     }
 
     template<typename T0, typename T1, typename T2>
     void inline fma(Span<T0, N> const& a, Span<T1, N> const& b, Span<T2, N> const& c) noexcept
     {
         auto const& [v0, v1, v2, v3] = cast(*this, a, b, c);
-
         for (std::size_t i = 0; i < batches(); ++i)
             v0[i] = mkn::avx::fma(v1[i], v2[i], v3[i]);
-        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
-            span[i] = a.span[i] * b.span[i] + c.span[i];
     }
 
 
@@ -152,8 +140,6 @@ public:
         auto const& [v0, v1] = cast(*this, that);
         for (std::size_t i = 0; i < batches(); ++i)
             v0[i] += v1[i];
-        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
-            span[i] += that.span[i];
     }
     template<template<typename, std::size_t> typename Arr, typename T0>
     auto inline operator+=(Arr<T0, N> const& arr) noexcept
@@ -173,11 +159,8 @@ public:
     auto inline operator-=(Span<T0, N> const& that) noexcept
     {
         auto const& [v0, v1] = cast(*this, that);
-
         for (std::size_t i = 0; i < batches(); ++i)
             v0[i] -= v1[i];
-        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
-            (*this)[i] -= that[i];
     }
     template<template<typename, std::size_t> typename Arr, typename T0>
     auto inline operator-=(Arr<T0, N> const& arr) noexcept
@@ -195,8 +178,6 @@ public:
         auto const& [v0, v1] = cast(*this, that);
         for (std::size_t i = 0; i < batches(); ++i)
             v0[i] *= v1[i];
-        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
-            span[i] *= that.span[i];
     }
     template<template<typename, std::size_t> typename Arr, typename T0>
     auto inline operator*=(Arr<T0, N> const& arr) noexcept
@@ -218,8 +199,6 @@ public:
         auto const& [v0, v1] = cast(*this, that);
         for (std::size_t i = 0; i < batches(); ++i)
             v0[i] /= v1[i];
-        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
-            span[i] /= that.span[i];
     }
     template<template<typename, std::size_t> typename Arr, typename T0>
     auto inline operator/=(Arr<T0, N> const& arr) noexcept
@@ -273,19 +252,149 @@ public:
 
 protected:
     std::size_t batches() const { return size() / N; }
-    auto modulo_leftover_idx(auto const siz) const { return siz - siz % N; }
-    auto modulo_leftover_idx() const { return modulo_leftover_idx(size()); }
-
 
 private:
     alignas(Options::ALIGN()) std::array<T, N> scratch{};
 };
 
 
-template<typename T, std::size_t _N = Options::N<std::decay_t<T>>()>
-class UnSpan : public Span<T, _N>
+// arbitrary/unknown size - not guaranteed to be an exact multiple of N, so
+// every op runs Span's batched loop and then mops up the ragged tail with a
+// scalar pass over [modulo_leftover_idx(), size())
+template<typename T, std::size_t _N = Options::N<T>()>
+class AsymmetricSpan : public Span<T, _N>
 {
     using Super = Span<T, _N>;
+    using R     = Super::R;
+
+    template<typename, std::size_t>
+    friend class AsymmetricSpan;
+
+protected:
+    using Super::cast;
+    using Super::span;
+    using Super::batches;
+
+public:
+    using Super::Super;
+
+    using Super::data;
+    using value_type        = Super::value_type;
+    auto constexpr static N = Super::N;
+
+    using AVX_t = Super::AVX_t;
+
+    using Super::add;
+    using Super::sub;
+    using Super::mul;
+    using Super::div;
+    using Super::fma;
+    using Super::operator+=;
+    using Super::operator-=;
+    using Super::operator*=;
+    using Super::operator/=;
+    using Super::operator=;
+    using Super::operator==;
+    using Super::size;
+
+    template<typename T0, typename T1>
+    void inline add(AsymmetricSpan<T0, N> const& a, AsymmetricSpan<T1, N> const& b) noexcept
+    {
+        Span<T0, N> const& sa = a;
+        Span<T1, N> const& sb = b;
+        Super::add(sa, sb);
+        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
+            span[i] = a.span[i] + b.span[i];
+    }
+
+    template<typename T0, typename T1>
+    void inline sub(AsymmetricSpan<T0, N> const& a, AsymmetricSpan<T1, N> const& b) noexcept
+    {
+        Span<T0, N> const& sa = a;
+        Span<T1, N> const& sb = b;
+        Super::sub(sa, sb);
+        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
+            span[i] = a.span[i] - b.span[i];
+    }
+
+    template<typename T0, typename T1>
+    void inline mul(AsymmetricSpan<T0, N> const& a, AsymmetricSpan<T1, N> const& b) noexcept
+    {
+        Span<T0, N> const& sa = a;
+        Span<T1, N> const& sb = b;
+        Super::mul(sa, sb);
+        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
+            span[i] = a.span[i] * b.span[i];
+    }
+
+    template<typename T0, typename T1>
+    void inline div(AsymmetricSpan<T0, N> const& a, AsymmetricSpan<T1, N> const& b) noexcept
+    {
+        Span<T0, N> const& sa = a;
+        Span<T1, N> const& sb = b;
+        Super::div(sa, sb);
+        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
+            span[i] = a.span[i] / b.span[i];
+    }
+
+    template<typename T0, typename T1, typename T2>
+    void inline fma(AsymmetricSpan<T0, N> const& a, AsymmetricSpan<T1, N> const& b,
+                    AsymmetricSpan<T2, N> const& c) noexcept
+    {
+        Span<T0, N> const& sa = a;
+        Span<T1, N> const& sb = b;
+        Span<T2, N> const& sc = c;
+        Super::fma(sa, sb, sc);
+        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
+            span[i] = a.span[i] * b.span[i] + c.span[i];
+    }
+
+    template<typename T0>
+    auto inline operator+=(AsymmetricSpan<T0, N> const& that) noexcept
+    {
+        Span<T0, N> const& sthat = that;
+        Super::operator+=(sthat);
+        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
+            span[i] += that.span[i];
+    }
+
+    template<typename T0>
+    auto inline operator-=(AsymmetricSpan<T0, N> const& that) noexcept
+    {
+        Span<T0, N> const& sthat = that;
+        Super::operator-=(sthat);
+        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
+            (*this)[i] -= that[i];
+    }
+
+    template<typename T0>
+    auto inline operator*=(AsymmetricSpan<T0, N> const& that) noexcept
+    {
+        Span<T0, N> const& sthat = that;
+        Super::operator*=(sthat);
+        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
+            span[i] *= that.span[i];
+    }
+
+    template<typename T0>
+    auto inline operator/=(AsymmetricSpan<T0, N> const& that) noexcept
+    {
+        Span<T0, N> const& sthat = that;
+        Super::operator/=(sthat);
+        for (std::size_t i = modulo_leftover_idx(); i < size(); ++i)
+            span[i] /= that.span[i];
+    }
+
+protected:
+    auto modulo_leftover_idx(auto const siz) const { return siz - siz % N; }
+    auto modulo_leftover_idx() const { return modulo_leftover_idx(size()); }
+};
+
+
+template<typename T, std::size_t _N = Options::N<std::decay_t<T>>()>
+class UnSpan : public AsymmetricSpan<T, _N>
+{
+    using Super = AsymmetricSpan<T, _N>;
     using R     = std::decay_t<T>;
 
 public:

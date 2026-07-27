@@ -1,5 +1,3 @@
-
-
 #include "mkn/avx.hpp"
 #include "mkn/kul/assert.hpp"
 
@@ -8,6 +6,9 @@
 
 #include "bench.hpp"
 
+
+using vector_type = mkn::avx::Vector<double>;
+
 // small enough that a+b stay resident in L1 across the whole run, so REPS
 // exercises compute/instruction throughput rather than memory bandwidth
 std::size_t constexpr static SIZE = 1024;
@@ -15,10 +16,7 @@ std::size_t constexpr static REPS = 4000000;
 
 void test()
 {
-    auto constexpr static N = mkn::avx::Options::ALIGN();
-    using Vec_t              = std::vector<double, mkn::kul::AlignedAllocator<double, N>>;
-
-    Vec_t a(SIZE, 1), b(SIZE, 2);
+    vector_type a(SIZE, 1), b(SIZE, 2);
 
     auto&& [sa, sb] = mkn::avx::make_spans(a, b);
 

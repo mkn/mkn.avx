@@ -62,6 +62,13 @@ bool constexpr is_aligned()
     return is_aligned(Container{});
 }
 
+// runtime check: is this address itself aligned to Options::ALIGN() bytes
+template<typename T>
+bool inline is_aligned(T const* ptr) noexcept
+{
+    return reinterpret_cast<std::uintptr_t>(ptr) % Options::ALIGN() == 0;
+}
+
 
 } // namespace mkn::avx
 

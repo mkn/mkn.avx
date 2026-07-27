@@ -73,11 +73,20 @@ auto inline make_span(Container& container, auto const start = 0) noexcept
     return Unit<typename Container::value_type, N>{container.data() + start};
 }
 
+// contract: container size() is an exact multiple of N - no leftover handling.
+// use make_unknown_size_span[s] when that cannot be guaranteed. size is a
+// runtime value, so the contract is checked and throws on violation rather
+// than silently truncating the tail.
 template<typename Container>
-auto make_span(Container& container) noexcept
+auto make_span(Container& container)
 {
-    using vt        = Container::value_type;
-    using real_type = std::conditional_t<std::is_const_v<Container>, vt const, vt>;
+    using vt                = Container::value_type;
+    using real_type         = std::conditional_t<std::is_const_v<Container>, vt const, vt>;
+    auto constexpr static N = Options::N<vt>();
+    if (container.size() % N != 0)
+        KEXCEPT(Exception, "make_span requires size to be an exact multiple of N ("
+                                + std::to_string(N)
+                                + "); use make_unknown_size_span for arbitrary sizes");
     if constexpr (is_aligned<Container>())
         return Span<real_type>{container};
     else
@@ -85,9 +94,32 @@ auto make_span(Container& container) noexcept
 }
 
 template<typename Container>
-auto make_span(Container& container, auto const start, auto const size) noexcept
+auto make_span(Container& container, auto const start, auto const size)
 {
+    auto constexpr static N = Options::N<typename Container::value_type>();
+    if (size % N != 0)
+        KEXCEPT(Exception, "make_span requires size to be an exact multiple of N ("
+                                + std::to_string(N)
+                                + "); use make_unknown_size_span for arbitrary sizes");
     return Span<typename Container::value_type>{container.data() + start, size};
+}
+
+// safe for any size - handles a ragged tail that doesn't divide evenly by N
+template<typename Container>
+auto make_unknown_size_span(Container& container) noexcept
+{
+    using vt        = Container::value_type;
+    using real_type = std::conditional_t<std::is_const_v<Container>, vt const, vt>;
+    if constexpr (is_aligned<Container>())
+        return AsymmetricSpan<real_type>{container};
+    else
+        return UnSpan<real_type>{container};
+}
+
+template<typename Container>
+auto make_unknown_size_span(Container& container, auto const start, auto const size) noexcept
+{
+    return AsymmetricSpan<typename Container::value_type>{container.data() + start, size};
 }
 
 template<std::size_t N, typename... Containers>
@@ -101,6 +133,12 @@ template<typename... Containers>
 auto inline make_spans(Containers&&... containers)
 {
     return std::make_tuple(make_span(containers)...);
+}
+
+template<typename... Containers>
+auto inline make_unknown_size_spans(Containers&&... containers)
+{
+    return std::make_tuple(make_unknown_size_span(containers)...);
 }
 
 
