@@ -1,0 +1,25 @@
+# iwyu mappings for mkn.avx, used by the iwyu profile in mkn.yaml
+[
+  # x86 intrinsics: only <immintrin.h> is meant to be included
+  { include: ["<mmintrin.h>",        "private", "<immintrin.h>", "public"] },
+  { include: ["<xmmintrin.h>",       "private", "<immintrin.h>", "public"] },
+  { include: ["<emmintrin.h>",       "private", "<immintrin.h>", "public"] },
+  { include: ["<pmmintrin.h>",       "private", "<immintrin.h>", "public"] },
+  { include: ["<tmmintrin.h>",       "private", "<immintrin.h>", "public"] },
+  { include: ["<smmintrin.h>",       "private", "<immintrin.h>", "public"] },
+  { include: ["<nmmintrin.h>",       "private", "<immintrin.h>", "public"] },
+  { include: ["<wmmintrin.h>",       "private", "<immintrin.h>", "public"] },
+  { include: ["<avxintrin.h>",       "private", "<immintrin.h>", "public"] },
+  { include: ["<avx2intrin.h>",      "private", "<immintrin.h>", "public"] },
+  { include: ["<fmaintrin.h>",       "private", "<immintrin.h>", "public"] },
+  { include: ["<avx512fintrin.h>",   "private", "<immintrin.h>", "public"] },
+  { include: ["<avx512vlintrin.h>",  "private", "<immintrin.h>", "public"] },
+  { include: ["<avx512bwintrin.h>",  "private", "<immintrin.h>", "public"] },
+  { include: ["<avx512dqintrin.h>",  "private", "<immintrin.h>", "public"] },
+
+  # libstdc++ 14 <format> forward declares std::vector, iwyu credits it when only a declaration is needed
+  { symbol: ["std::vector", "private", "<vector>", "public"] },
+
+  # C++ spelling of the C header, <assert.h> itself is public in iwyu's own mappings
+  { symbol: ["assert", "private", "<cassert>", "public"] },
+]

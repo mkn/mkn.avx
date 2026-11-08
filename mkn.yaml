@@ -54,6 +54,16 @@ profile:
   mod: |
     clang.format{init{style: file, types: hpp cpp ipp, paths: .}}
 
+# include-what-you-use report for inc/, needs iwyu on PATH, see res/iwyu.imp
+- name: iwyu
+  parent: test
+  mod:
+  - name: cpp.iwyu
+    compile:
+      paths: inc
+      headers: -x c++-header
+      args: -Xiwyu --mapping_file=res/iwyu.imp
+
 - name: xsimd
   parent: headers
   inc: tpp/xsimd/include

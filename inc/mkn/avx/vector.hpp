@@ -32,10 +32,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _MKN_AVX_VECTOR_HPP_
 
 #include "mkn/kul/alloc.hpp"
-
 #include "mkn/avx/def.hpp"
 
 #include <vector>
+#include <cstdint>
 
 namespace mkn::avx
 {
