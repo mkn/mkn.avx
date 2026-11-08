@@ -31,12 +31,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MKN_AVX_GRID_HPP_
 #define _MKN_AVX_GRID_HPP_
 
-#include <cassert>
-#include <type_traits>
-
-
 #include "mkn/kul/math.hpp"
 #include "mkn/avx/span.hpp"
+#include "mkn/avx/vector.hpp"
+
+#include <cassert>
+#include <type_traits>
+#include <array>
+#include <cstddef>
+#include <cstdint>
 
 namespace mkn::avx
 {

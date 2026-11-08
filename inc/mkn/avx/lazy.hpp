@@ -33,13 +33,22 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "mkn/kul/io.hpp"
 #include "mkn/kul/alloc.hpp"
-
 #include "mkn/avx/span.hpp"
+#include "mkn/avx/def.hpp"
+#include "mkn/kul/defs.hpp"
+#include "mkn/kul/os.hpp"
 
 #include <new>
 #include <tuple>
 #include <vector>
 #include <cstdint>
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <cstddef>
+#include <functional>
+#include <sstream>
+#include <string>
 
 namespace mkn::avx
 {

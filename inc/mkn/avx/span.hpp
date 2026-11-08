@@ -31,6 +31,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MKN_AVX_SPAN_HPP_
 #define _MKN_AVX_SPAN_HPP_
 
+// IWYU pragma: private, include "mkn/avx.hpp"
+// IWYU pragma: friend ".*mkn/avx/.*"
+
 #include "mkn/kul/span.hpp"
 
 #include "mkn/avx/def.hpp"
@@ -38,9 +41,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "mkn/avx/types.hpp"
 
 #include <array>
-#include <cassert>
-#include <cstddef>
 #include <cstring>
+#include <algorithm>
 
 
 namespace mkn::avx

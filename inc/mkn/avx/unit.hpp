@@ -31,16 +31,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MKN_AVX_UNIT_HPP_
 #define _MKN_AVX_UNIT_HPP_
 
-#include "mkn/kul/span.hpp"
+// IWYU pragma: private, include "mkn/avx.hpp"
+// IWYU pragma: friend ".*mkn/avx/.*"
 
+#include "mkn/kul/span.hpp"
 #include "mkn/avx/def.hpp"
 #include "mkn/avx/types.hpp"
 
 #include <array>
 #include <tuple>
-#include <cassert>
 #include <cstddef>
-#include <cstring>
+#include <type_traits>
 
 
 namespace mkn::avx

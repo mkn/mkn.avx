@@ -31,8 +31,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MKN_AVX_HPP_
 #define _MKN_AVX_HPP_
 
-#include "mkn/avx/span.hpp"
+#include "mkn/avx/def.hpp"   // IWYU pragma: export
+#include "mkn/avx/span.hpp"  // IWYU pragma: export
+#include "mkn/avx/types.hpp" // IWYU pragma: export
+#include "mkn/avx/unit.hpp"  // IWYU pragma: export
 #include "mkn/avx/vector.hpp"
+#include "mkn/kul/except.hpp"
+
+#include <cstddef>
+#include <string>
+#include <tuple>
+#include <type_traits>
 
 
 #if 0 // sample code

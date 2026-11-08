@@ -34,10 +34,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "mkn/avx/def.hpp"
 #include "mkn/avx/unit.hpp"
 
-#include "unit.hpp"
-
 #include <array>
 #include <optional>
+#include <cstddef>
+#include <type_traits>
 
 
 namespace mkn::avx::detail

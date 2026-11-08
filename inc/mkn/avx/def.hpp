@@ -31,13 +31,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MKN_AVX_DEF_HPP_
 #define _MKN_AVX_DEF_HPP_
 
+// IWYU pragma: private, include "mkn/avx.hpp"
+// IWYU pragma: friend ".*mkn/avx/.*"
+
 #include "mkn/kul/alloc.hpp"
 #include "mkn/kul/except.hpp"
 
-#include <cassert>
 #include <cstdint>
-#include <immintrin.h> // avx
 #include <type_traits>
+#include <cstddef>
+#include <string>
 
 // try running
 //   clang -dM -march=native -E - < /dev/null | grep AVX

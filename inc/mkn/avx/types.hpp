@@ -31,9 +31,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MKN_AVX_TYPES_HPP_
 #define _MKN_AVX_TYPES_HPP_
 
+// IWYU pragma: private, include "mkn/avx.hpp"
+// IWYU pragma: friend ".*mkn/avx/.*"
+
+#include <immintrin.h> // avx
 #include <cstdint>
 #include <utility>
-#include <immintrin.h> // avx
+#include <cstddef>
 
 namespace mkn::avx
 {
