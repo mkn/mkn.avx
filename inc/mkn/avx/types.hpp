@@ -165,7 +165,8 @@ struct Type_<double, 4>
     auto const static inline to_int32   = [](auto const& a) { return _mm256_cvttpd_epi32(a); };
     auto const static inline from_int32 = [](auto const& a) { return _mm256_cvtepi32_pd(a); };
 
-    auto const static inline fma = _mm256_fmadd_pd;
+    // a lambda, not the intrinsic's address: MSVC's intrinsics have none (LNK2019)
+    auto const static inline fma = [](auto&&... v) { return _mm256_fmadd_pd(v...); };
 };
 
 template<>
