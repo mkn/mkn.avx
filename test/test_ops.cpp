@@ -136,10 +136,11 @@ int main() noexcept
 {
     std::cout << __FILE__ << std::endl;
     mkn::avx::width<1>("scalar");
-#if defined(__SSE4_1__)
+// MSVC defines neither __SSE4_1__ nor __FMA__: its /arch:AVX and /arch:AVX2 imply them
+#if defined(__SSE4_1__) || defined(__AVX__)
     mkn::avx::width<2>("double x2");
 #endif
-#if defined(__AVX2__) && defined(__FMA__)
+#if defined(__AVX2__) && (defined(__FMA__) || defined(_MSC_VER))
     mkn::avx::width<4>("double x4");
 #endif
 #if defined(__AVX512F__)
