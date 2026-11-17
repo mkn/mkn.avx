@@ -87,6 +87,53 @@ void ops(std::size_t const offset)
     check(!any(lt(nan, va) | gt(nan, va)), "NaN compare", 0);
 }
 
+// masked loads and stores: false lanes read as 0 and leave memory alone, even past the end of an
+//  allocation of the true lanes only (a partial block at the end of an array)
+template<std::size_t N>
+void masked(std::size_t const offset)
+{
+    using T = Type<double, N>;
+    std::array<double, N> a, b, out;
+    for (std::size_t l = 0; l < N; ++l)
+    {
+        a[l] = values[(offset + l) % std::size(values)];
+        b[l] = values[(offset + 3 * l + 1) % std::size(values)];
+    }
+    auto const va = unaligned_load<double, N>(a.data());
+    auto const vb = unaligned_load<double, N>(b.data());
+    auto const m  = lt(va, vb);
+
+    double constexpr sentinel = 12345.5;
+    out.fill(sentinel);
+    mask_store(m, out.data(), va);
+    for (std::size_t l = 0; l < N; ++l)
+        check(same(out[l], a[l] < b[l] ? a[l] : sentinel), "mask_store", l);
+
+    unaligned_store(out.data(), mask_load(m, a.data()));
+    for (std::size_t l = 0; l < N; ++l)
+        check(same(out[l], a[l] < b[l] ? a[l] : 0.), "mask_load", l);
+
+    // the first k lanes only, on exactly k doubles
+    for (std::size_t k = 1; k <= N; ++k)
+    {
+        std::array<double, N> idx;
+        for (std::size_t l = 0; l < N; ++l)
+            idx[l] = static_cast<double>(l);
+        auto const first_k
+            = lt(unaligned_load<double, N>(idx.data()), T{load<double, N>(static_cast<double>(k))});
+        auto* const tail = new double[k];
+        for (std::size_t l = 0; l < k; ++l)
+            tail[l] = sentinel;
+        mask_store(first_k, tail, va);
+        for (std::size_t l = 0; l < k; ++l)
+            check(same(tail[l], a[l]), "mask_store first k", l);
+        unaligned_store(out.data(), mask_load(first_k, tail));
+        for (std::size_t l = 0; l < N; ++l)
+            check(same(out[l], l < k ? a[l] : 0.), "mask_load first k", l);
+        delete[] tail;
+    }
+}
+
 // truncating conversions, and the int32 lanes' loads, stores and sums
 template<std::size_t N>
 void int32s(std::size_t const offset)
@@ -123,7 +170,10 @@ template<std::size_t N>
 void width(char const* const name)
 {
     for (std::size_t offset = 0; offset < std::size(values); ++offset)
+    {
         ops<N>(offset);
+        masked<N>(offset);
+    }
     if constexpr (N > 2) // int32 lanes: 4 (AVX2), 8 (AVX-512F)
         for (std::size_t offset = 0; offset < std::size(values); ++offset)
             int32s<N>(offset);

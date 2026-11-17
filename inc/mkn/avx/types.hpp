@@ -74,6 +74,12 @@ struct Type_
         = [](bool const m, auto const& a, auto const& b) { return m ? a : b; };
     auto constexpr static to_int32   = [](auto const& a) { return static_cast<std::int32_t>(a); };
     auto constexpr static from_int32 = [](std::int32_t const a) { return static_cast<T>(a); };
+    // masked: a false lane neither reads nor writes memory
+    auto constexpr static mask_load  = [](bool const m, auto const* p) { return m ? *p : T{}; };
+    auto constexpr static mask_store = [](bool const m, auto* p, auto const& v) {
+        if (m)
+            *p = v;
+    };
 };
 
 
@@ -131,6 +137,12 @@ struct Type_<double, 2>
     auto const static inline any     = [](auto const& m) { return _mm_movemask_pd(m) != 0; };
     auto const static inline select
         = [](auto const& m, auto const& a, auto const& b) { return _mm_blendv_pd(b, a, m); };
+    // masked (AVX): a false lane neither reads nor writes memory, loads 0
+    auto const static inline mask_load
+        = [](auto const& m, double const* p) { return _mm_maskload_pd(p, _mm_castpd_si128(m)); };
+    auto const static inline mask_store = [](auto const& m, double* p, auto const& v) {
+        _mm_maskstore_pd(p, _mm_castpd_si128(m), v);
+    };
 };
 
 template<>
@@ -161,6 +173,13 @@ struct Type_<double, 4>
     auto const static inline any = [](auto const& m) { return _mm256_movemask_pd(m) != 0; };
     auto const static inline select
         = [](auto const& m, auto const& a, auto const& b) { return _mm256_blendv_pd(b, a, m); };
+    // masked: a false lane neither reads nor writes memory, loads 0
+    auto const static inline mask_load = [](auto const& m, double const* p) {
+        return _mm256_maskload_pd(p, _mm256_castpd_si256(m));
+    };
+    auto const static inline mask_store = [](auto const& m, double* p, auto const& v) {
+        _mm256_maskstore_pd(p, _mm256_castpd_si256(m), v);
+    };
     // truncating, to and from 4 int32 lanes (Type_<std::int32_t, 4>)
     auto const static inline to_int32   = [](auto const& a) { return _mm256_cvttpd_epi32(a); };
     auto const static inline from_int32 = [](auto const& a) { return _mm256_cvtepi32_pd(a); };
@@ -200,6 +219,11 @@ struct Type_<double, 8>
     auto const static inline select = [](__mmask8 const m, auto const& a, auto const& b) {
         return _mm512_mask_blend_pd(m, b, a);
     };
+    // masked: a false lane neither reads nor writes memory, loads 0
+    auto const static inline mask_load
+        = [](__mmask8 const m, double const* p) { return _mm512_maskz_loadu_pd(m, p); };
+    auto const static inline mask_store
+        = [](__mmask8 const m, double* p, auto const& v) { _mm512_mask_storeu_pd(p, m, v); };
     // truncating, to and from 8 int32 lanes (Type_<std::int32_t, 8>)
     auto const static inline to_int32   = [](auto const& a) { return _mm512_cvttpd_epi32(a); };
     auto const static inline from_int32 = [](auto const& a) { return _mm512_cvtepi32_pd(a); };
@@ -488,6 +512,16 @@ template<typename T, std::size_t SIZE>
 Type<T, SIZE> inline select(Mask<T, SIZE> const& m, Type<T, SIZE> const& a,
                             Type<T, SIZE> const& b) noexcept
 { return {Type_<T, SIZE>::select(m.m, a(), b())}; }
+
+// unaligned, masked: the lanes of m read (0 for the others) or written, the others' memory not
+//  touched (may be past the end of an array)
+template<typename T, std::size_t SIZE>
+Type<T, SIZE> inline mask_load(Mask<T, SIZE> const& m, T const* p) noexcept
+{ return {Type_<T, SIZE>::mask_load(m.m, p)}; }
+
+template<typename T, std::size_t SIZE>
+void inline mask_store(Mask<T, SIZE> const& m, T* p, Type<T, SIZE> const& v) noexcept
+{ Type_<T, SIZE>::mask_store(m.m, p, v()); }
 
 // truncated to std::int32_t lanes, and back
 template<std::size_t SIZE>
