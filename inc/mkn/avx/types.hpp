@@ -37,6 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <immintrin.h> // avx
 #include <cstdint>
 #include <utility>
+#include <cmath>
 #include <cstddef>
 
 namespace mkn::avx
@@ -59,6 +60,20 @@ struct Type_
     auto const static inline unaligned_store = [](auto a, auto& b) { return *a = b; };
 
     auto constexpr static fma = [](auto& a, auto& b, auto& c) { return a * b + c; };
+
+    // masks are bools
+    using mask_type                = bool;
+    auto constexpr static floor    = [](auto const& a) { return std::floor(a); };
+    auto constexpr static abs      = [](auto const& a) { return std::abs(a); };
+    auto constexpr static lt       = [](auto const& a, auto const& b) { return a < b; };
+    auto constexpr static gt       = [](auto const& a, auto const& b) { return a > b; };
+    auto constexpr static mask_and = [](bool const a, bool const b) { return a and b; };
+    auto constexpr static mask_or  = [](bool const a, bool const b) { return a or b; };
+    auto constexpr static any      = [](bool const m) { return m; };
+    auto constexpr static select
+        = [](bool const m, auto const& a, auto const& b) { return m ? a : b; };
+    auto constexpr static to_int32   = [](auto const& a) { return static_cast<std::int32_t>(a); };
+    auto constexpr static from_int32 = [](std::int32_t const a) { return static_cast<T>(a); };
 };
 
 
@@ -103,6 +118,19 @@ struct Type_<double, 2>
     auto const static inline fma             = [](auto&&... v) { return _mm_fmadd_pd(v...); };
     auto const static inline unaligned_load  = [](auto&&... v) { return _mm_loadu_pd(v...); };
     auto const static inline unaligned_store = [](auto&&... v) { return _mm_storeu_pd(v...); };
+
+    using mask_type                = __m128d; // all bits set per true lane
+    auto const static inline floor = [](auto const& a) { return _mm_floor_pd(a); };
+    auto const static inline abs
+        = [](auto const& a) { return _mm_andnot_pd(_mm_set1_pd(-0.0), a); };
+    auto const static inline lt = [](auto const& a, auto const& b) { return _mm_cmplt_pd(a, b); };
+    auto const static inline gt = [](auto const& a, auto const& b) { return _mm_cmpgt_pd(a, b); };
+    auto const static inline mask_and
+        = [](auto const& a, auto const& b) { return _mm_and_pd(a, b); };
+    auto const static inline mask_or = [](auto const& a, auto const& b) { return _mm_or_pd(a, b); };
+    auto const static inline any     = [](auto const& m) { return _mm_movemask_pd(m) != 0; };
+    auto const static inline select
+        = [](auto const& m, auto const& a, auto const& b) { return _mm_blendv_pd(b, a, m); };
 };
 
 template<>
@@ -117,6 +145,25 @@ struct Type_<double, 4>
     auto const static inline set_v           = [](auto&&... v) { return _mm256_set1_pd(v...); };
     auto const static inline unaligned_load  = [](auto&&... v) { return _mm256_loadu_pd(v...); };
     auto const static inline unaligned_store = [](auto&&... v) { return _mm256_storeu_pd(v...); };
+
+    using mask_type                = __m256d; // all bits set per true lane
+    auto const static inline floor = [](auto const& a) { return _mm256_floor_pd(a); };
+    auto const static inline abs
+        = [](auto const& a) { return _mm256_andnot_pd(_mm256_set1_pd(-0.0), a); };
+    auto const static inline lt
+        = [](auto const& a, auto const& b) { return _mm256_cmp_pd(a, b, _CMP_LT_OQ); };
+    auto const static inline gt
+        = [](auto const& a, auto const& b) { return _mm256_cmp_pd(a, b, _CMP_GT_OQ); };
+    auto const static inline mask_and
+        = [](auto const& a, auto const& b) { return _mm256_and_pd(a, b); };
+    auto const static inline mask_or
+        = [](auto const& a, auto const& b) { return _mm256_or_pd(a, b); };
+    auto const static inline any = [](auto const& m) { return _mm256_movemask_pd(m) != 0; };
+    auto const static inline select
+        = [](auto const& m, auto const& a, auto const& b) { return _mm256_blendv_pd(b, a, m); };
+    // truncating, to and from 4 int32 lanes (Type_<std::int32_t, 4>)
+    auto const static inline to_int32   = [](auto const& a) { return _mm256_cvttpd_epi32(a); };
+    auto const static inline from_int32 = [](auto const& a) { return _mm256_cvtepi32_pd(a); };
 
     auto const static inline fma = _mm256_fmadd_pd;
 };
@@ -133,7 +180,28 @@ struct Type_<double, 8>
     auto const static inline set_v           = [](auto&&... v) { return _mm512_set1_pd(v...); };
     auto const static inline unaligned_load  = [](auto&&... v) { return _mm512_loadu_pd(v...); };
     auto const static inline unaligned_store = [](auto&&... v) { return _mm512_storeu_pd(v...); };
-    // auto const static inline fma = _mm256_fmadd_pd;
+    auto const static inline fma             = [](auto&&... v) { return _mm512_fmadd_pd(v...); };
+
+    using mask_type                = __mmask8; // a bit per lane
+    auto const static inline floor = [](auto const& a) {
+        return _mm512_roundscale_pd(a, _MM_FROUND_TO_NEG_INF | _MM_FROUND_NO_EXC);
+    };
+    auto const static inline abs = [](auto const& a) { return _mm512_abs_pd(a); };
+    auto const static inline lt
+        = [](auto const& a, auto const& b) { return _mm512_cmp_pd_mask(a, b, _CMP_LT_OQ); };
+    auto const static inline gt
+        = [](auto const& a, auto const& b) { return _mm512_cmp_pd_mask(a, b, _CMP_GT_OQ); };
+    auto const static inline mask_and
+        = [](__mmask8 const a, __mmask8 const b) { return static_cast<__mmask8>(a & b); };
+    auto const static inline mask_or
+        = [](__mmask8 const a, __mmask8 const b) { return static_cast<__mmask8>(a | b); };
+    auto const static inline any    = [](__mmask8 const m) { return m != 0; };
+    auto const static inline select = [](__mmask8 const m, auto const& a, auto const& b) {
+        return _mm512_mask_blend_pd(m, b, a);
+    };
+    // truncating, to and from 8 int32 lanes (Type_<std::int32_t, 8>)
+    auto const static inline to_int32   = [](auto const& a) { return _mm512_cvttpd_epi32(a); };
+    auto const static inline from_int32 = [](auto const& a) { return _mm512_cvtepi32_pd(a); };
 };
 //////////////////// double ////////////////////
 
@@ -219,17 +287,48 @@ struct Type_<std::int16_t, 8>
 template<>
 struct Type_<std::int32_t, 4>
 {
-    using internal_type          = __m128i;
-    auto const static inline add = [](auto&&... v) { return _mm_add_epi32(v...); };
-    auto const static inline mul = [](auto&&... v) { return _mm_mullo_epi32(v...); };
+    using internal_type            = __m128i;
+    auto const static inline add   = [](auto&&... v) { return _mm_add_epi32(v...); };
+    auto const static inline mul   = [](auto&&... v) { return _mm_mullo_epi32(v...); };
+    auto const static inline set_v = [](std::int32_t const v) { return _mm_set1_epi32(v); };
+    auto const static inline sub   = [](auto&&... v) { return _mm_sub_epi32(v...); };
+    auto const static inline store
+        = [](std::int32_t* p, auto const& v) { _mm_store_si128(reinterpret_cast<__m128i*>(p), v); };
+    // no integer division instruction: an error only where used
+    auto const static inline div = [](auto&&... v) {
+        static_assert(sizeof...(v) == 0, "mkn::avx: no int32 lane division");
+        return __m128i{};
+    };
+    auto const static inline unaligned_load = [](std::int32_t const* p) {
+        return _mm_loadu_si128(reinterpret_cast<__m128i const*>(p));
+    };
+    auto const static inline unaligned_store = [](std::int32_t* p, auto const& v) {
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(p), v);
+    };
     // auto const static inline fma = _mm256_fmadd_ps;
 };
 template<>
 struct Type_<std::int32_t, 8>
 {
-    using internal_type          = __m256i;
-    auto const static inline add = [](auto&&... v) { return _mm256_add_epi32(v...); };
-    auto const static inline mul = [](auto&&... v) { return _mm256_mullo_epi32(v...); };
+    using internal_type            = __m256i;
+    auto const static inline add   = [](auto&&... v) { return _mm256_add_epi32(v...); };
+    auto const static inline mul   = [](auto&&... v) { return _mm256_mullo_epi32(v...); };
+    auto const static inline set_v = [](std::int32_t const v) { return _mm256_set1_epi32(v); };
+    auto const static inline sub   = [](auto&&... v) { return _mm256_sub_epi32(v...); };
+    auto const static inline store = [](std::int32_t* p, auto const& v) {
+        _mm256_store_si256(reinterpret_cast<__m256i*>(p), v);
+    };
+    // no integer division instruction: an error only where used
+    auto const static inline div = [](auto&&... v) {
+        static_assert(sizeof...(v) == 0, "mkn::avx: no int32 lane division");
+        return __m256i{};
+    };
+    auto const static inline unaligned_load = [](std::int32_t const* p) {
+        return _mm256_loadu_si256(reinterpret_cast<__m256i const*>(p));
+    };
+    auto const static inline unaligned_store = [](std::int32_t* p, auto const& v) {
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(p), v);
+    };
     // auto const static inline fma = _mm256_fmadd_ps;
 };
 //////////////////// std::int32_t ////////////////////
@@ -293,82 +392,110 @@ struct UnType : public Type<T, SIZE> // Unaligned flag
 
 template<typename T, std::size_t SIZE>
 Type<T, SIZE> inline operator+(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
-{
-    return {Type<T, SIZE>::add(a(), b())};
-}
+{ return {Type<T, SIZE>::add(a(), b())}; }
 
 template<typename T, std::size_t SIZE>
 Type<T, SIZE> inline operator-(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
-{
-    return {Type<T, SIZE>::Super::impl_type::sub(a(), b())};
-}
+{ return {Type<T, SIZE>::Super::impl_type::sub(a(), b())}; }
 
 template<typename T, std::size_t SIZE>
 Type<T, SIZE> inline operator*(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
-{
-    return {Type<T, SIZE>::mul(a(), b())};
-}
+{ return {Type<T, SIZE>::mul(a(), b())}; }
 
 template<typename T, std::size_t SIZE>
 Type<T, SIZE> inline operator/(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
-{
-    return {Type<T, SIZE>::Super::impl_type::div(a(), b())};
-}
+{ return {Type<T, SIZE>::Super::impl_type::div(a(), b())}; }
 
 template<typename T, std::size_t SIZE>
 void inline operator+=(Type<T, SIZE>& __restrict a, Type<T, SIZE> const& __restrict b) noexcept
-{
-    a() = Type<T, SIZE>::add(a(), b());
-}
+{ a() = Type<T, SIZE>::add(a(), b()); }
 
 template<typename T, std::size_t SIZE>
 void inline operator-=(Type<T, SIZE>& __restrict a, Type<T, SIZE> const& __restrict b) noexcept
-{
-    a() = Type<T, SIZE>::sub(a(), b());
-}
+{ a() = Type<T, SIZE>::sub(a(), b()); }
 
 template<typename T, std::size_t SIZE>
 void inline operator*=(Type<T, SIZE>& __restrict a, Type<T, SIZE> const& __restrict b) noexcept
-{
-    a() = Type<T, SIZE>::mul(a(), b());
-}
+{ a() = Type<T, SIZE>::mul(a(), b()); }
 
 template<typename T, std::size_t SIZE>
 void inline operator/=(Type<T, SIZE>& a, Type<T, SIZE> const& b) noexcept
-{
-    a() = Type<T, SIZE>::div(a(), b());
-}
+{ a() = Type<T, SIZE>::div(a(), b()); }
 
 template<typename T, std::size_t SIZE>
 auto inline load(T const a) noexcept
-{
-    return Type<T, SIZE>::set_v(a);
-}
+{ return Type<T, SIZE>::set_v(a); }
 
 template<typename T, std::size_t SIZE>
 void inline store(T* __restrict a, Type<T, SIZE> const& __restrict b) noexcept
-{
-    Type<T, SIZE>::Super::impl_type::store(a, b());
-}
+{ Type<T, SIZE>::Super::impl_type::store(a, b()); }
 
 template<typename T, std::size_t SIZE>
 Type<T, SIZE> unaligned_load(T const* __restrict a) noexcept
-{
-    return Type<T, SIZE>::Super::impl_type::unaligned_load(a);
-}
+{ return Type<T, SIZE>::Super::impl_type::unaligned_load(a); }
 
 template<typename T, std::size_t SIZE>
 void unaligned_store(T* __restrict a, Type<T, SIZE> const& b) noexcept
-{
-    Type<T, SIZE>::Super::impl_type::unaligned_store(a, b());
-}
+{ Type<T, SIZE>::Super::impl_type::unaligned_store(a, b()); }
 
 template<typename T, std::size_t SIZE>
 Type<T, SIZE> inline fma(Type<T, SIZE> const& a, Type<T, SIZE> const& b,
                          Type<T, SIZE> const& c) noexcept
+{ return {Type<T, SIZE>::Super::impl_type::fma(a(), b(), c())}; }
+
+// a lane mask, from the comparisons: per lane true or false (SSE / AVX: a vector with all bits of
+//  a true lane set, AVX-512: a bit per lane, scalar: a bool)
+template<typename T, std::size_t SIZE>
+struct Mask
 {
-    return {Type<T, SIZE>::Super::impl_type::fma(a(), b(), c())};
-}
+    using internal_type = typename Type_<T, SIZE>::mask_type;
+    internal_type m;
+};
+
+template<typename T, std::size_t SIZE>
+Type<T, SIZE> inline floor(Type<T, SIZE> const& a) noexcept
+{ return {Type_<T, SIZE>::floor(a())}; }
+
+template<typename T, std::size_t SIZE>
+Type<T, SIZE> inline abs(Type<T, SIZE> const& a) noexcept
+{ return {Type_<T, SIZE>::abs(a())}; }
+
+// a < b and a > b per lane (ordered: false for NaN)
+template<typename T, std::size_t SIZE>
+Mask<T, SIZE> inline lt(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
+{ return {Type_<T, SIZE>::lt(a(), b())}; }
+
+template<typename T, std::size_t SIZE>
+Mask<T, SIZE> inline gt(Type<T, SIZE> const& a, Type<T, SIZE> const& b) noexcept
+{ return {Type_<T, SIZE>::gt(a(), b())}; }
+
+template<typename T, std::size_t SIZE>
+Mask<T, SIZE> inline operator&(Mask<T, SIZE> const& a, Mask<T, SIZE> const& b) noexcept
+{ return {Type_<T, SIZE>::mask_and(a.m, b.m)}; }
+
+template<typename T, std::size_t SIZE>
+Mask<T, SIZE> inline operator|(Mask<T, SIZE> const& a, Mask<T, SIZE> const& b) noexcept
+{ return {Type_<T, SIZE>::mask_or(a.m, b.m)}; }
+
+// true if any lane is
+template<typename T, std::size_t SIZE>
+bool inline any(Mask<T, SIZE> const& m) noexcept
+{ return Type_<T, SIZE>::any(m.m); }
+
+// per lane: a where m, else b
+template<typename T, std::size_t SIZE>
+Type<T, SIZE> inline select(Mask<T, SIZE> const& m, Type<T, SIZE> const& a,
+                            Type<T, SIZE> const& b) noexcept
+{ return {Type_<T, SIZE>::select(m.m, a(), b())}; }
+
+// truncated to std::int32_t lanes, and back
+template<std::size_t SIZE>
+Type<std::int32_t, SIZE> inline to_int32(Type<double, SIZE> const& a) noexcept
+{ return {Type_<double, SIZE>::to_int32(a())}; }
+
+template<std::size_t SIZE>
+Type<double, SIZE> inline to_double(Type<std::int32_t, SIZE> const& a) noexcept
+{ return {Type_<double, SIZE>::from_int32(a())}; }
 
 } /* namespace mkn::avx */
 
