@@ -2,12 +2,16 @@
 # -O >= 3 required for AVX
 
 name: mkn.avx
+property:
+  # dependency versions: master on master, latest on latest (a bare dep is the default branch)
+  cpp.iwyu.version: master
+  mkn.kul.version: master
 parent: headers
 
 profile:
 - name: headers
   inc: inc
-  dep: mkn.kul
+  dep: mkn.kul#${mkn.kul.version}
 
 - name: test_all
   parent: headers
@@ -52,13 +56,14 @@ profile:
 
 - name: format
   mod: |
-    clang.format{init{style: file, types: hpp cpp ipp, paths: .}}
+    clang.format#master{init{style: file, types: hpp cpp ipp, paths: .}}
 
 # include-what-you-use report for inc/, needs iwyu on PATH, see res/iwyu.imp
 - name: iwyu
   parent: test
   mod:
   - name: cpp.iwyu
+    version: ${cpp.iwyu.version}
     compile:
       paths: inc
       headers: -x c++-header
