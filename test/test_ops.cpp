@@ -1,7 +1,7 @@
 // mkn::avx lane operations (fma, floor, abs, comparisons and masks, select, int32 conversions)
 //  against the scalar std result per lane, at every width the build enables
 
-#include "mkn/kul/assert.hpp"
+#include "mkn/kul/test.hpp"
 #include "mkn/avx.hpp"
 
 #include <array>
@@ -10,6 +10,10 @@
 #include <cstdint>
 #include <iostream>
 #include <limits>
+#include <map>
+#include <string>
+
+MKN_KUL_TEST_DECLARE();
 
 namespace mkn::avx
 {
@@ -18,14 +22,16 @@ namespace mkn::avx
 double constexpr static values[] = {-0.0,        0.0,     0.5,  -0.5,  1.0, -1.0, 2.25, -2.25,
                                     1.0 - 1e-15, -1e-300, 7.75, -7.75, 3.5, -3.5, 1e8,  -1e8};
 
-std::size_t static checks = 0;
+// per operation, over every lane and offset of the width under test: one check each (width())
+std::map<std::string, bool> static results;
 
 void check(bool const ok, char const* const what, std::size_t const lane)
 {
-    ++checks;
     if (!ok)
         std::cerr << "mkn::avx test_ops: " << what << " lane " << lane << std::endl;
-    mkn::kul::abort_if_not(ok);
+    auto const [it, fresh] = results.try_emplace(what, ok);
+    if (!fresh)
+        it->second = it->second and ok;
 }
 
 // the same bits (floor(-0.5) is -1, floor(-0.0) is -0.0: the sign matters)
@@ -177,7 +183,9 @@ void width(char const* const name)
     if constexpr (N > 2) // int32 lanes: 4 (AVX2), 8 (AVX-512F)
         for (std::size_t offset = 0; offset < std::size(values); ++offset)
             int32s<N>(offset);
-    std::cout << "  " << name << " ok" << std::endl;
+    for (auto const& [what, ok] : results)
+        MKN_KUL_TEST_CHECK(ok, std::string{name} + " " + what);
+    results.clear();
 }
 
 } // namespace mkn::avx
@@ -196,6 +204,5 @@ int main() noexcept
 #if MKN_AVX_512_ACTIVE
     mkn::avx::width<8>("double x8");
 #endif
-    std::cout << mkn::avx::checks << " checks" << std::endl;
     return 0;
 }

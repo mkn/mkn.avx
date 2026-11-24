@@ -1,15 +1,16 @@
 
 #include "mkn/kul/log.hpp"
-#include "mkn/kul/assert.hpp"
+#include "mkn/kul/test.hpp"
 
 #include "mkn/kul/math.hpp"
 #include "mkn/kul/float.hpp"
-#include "mkn/kul/assert.hpp"
 
 #include "mkn/avx.hpp"
 #include "mkn/avx/grid.hpp"
 
 #include <cassert>
+
+MKN_KUL_TEST_DECLARE();
 
 
 // shape is exactly N per dimension, so the whole flattened grid - and every
@@ -27,7 +28,7 @@ void grid_clean()
 
     grid0 += grid1;
 
-    mkn::kul::abort_if_not(mkn::kul::float_equals(mkn::kul::math::sum(v0), (N * N * N) * 2));
+    MKN_KUL_TEST_CHECK(mkn::kul::float_equals(mkn::kul::math::sum(v0), (N * N * N) * 2));
 }
 
 // arbitrary shapes / offset slices - row remainders aren't guaranteed to
@@ -43,7 +44,7 @@ void grid_asymmetric()
 
         grid0 += grid1;
 
-        mkn::kul::abort_if_not(mkn::kul::float_equals(mkn::kul::math::sum(v0), 2000));
+        MKN_KUL_TEST_CHECK(mkn::kul::float_equals(mkn::kul::math::sum(v0), 2000));
     }
 
     {
@@ -55,7 +56,7 @@ void grid_asymmetric()
 
         (grid0 >> 0) += (grid1 >> 0);
 
-        mkn::kul::abort_if_not(mkn::kul::float_equals(mkn::kul::math::sum(v0), S * S * S * 2));
+        MKN_KUL_TEST_CHECK(mkn::kul::float_equals(mkn::kul::math::sum(v0), S * S * S * 2));
     }
 
     {
@@ -67,7 +68,7 @@ void grid_asymmetric()
 
         (grid0 >> 1) += (grid1 >> 1);
 
-        mkn::kul::abort_if_not(mkn::kul::float_equals(mkn::kul::math::sum(v0), 8 * 8 * 8));
+        MKN_KUL_TEST_CHECK(mkn::kul::float_equals(mkn::kul::math::sum(v0), 8 * 8 * 8));
     }
 
     {
@@ -79,7 +80,7 @@ void grid_asymmetric()
         (grid0 >> 1) += (grid1 >> 1);
         (grid0 >> 1) *= (grid1 >> 1);
 
-        mkn::kul::abort_if_not(mkn::kul::float_equals(mkn::kul::math::sum(v0), 4 * (8 * 8 * 8)));
+        MKN_KUL_TEST_CHECK(mkn::kul::float_equals(mkn::kul::math::sum(v0), 4 * (8 * 8 * 8)));
     }
 }
 

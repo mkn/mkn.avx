@@ -1,9 +1,11 @@
 #include <vector>
 #include <cstddef>
 #include "mkn/avx.hpp"
-#include "mkn/kul/assert.hpp"
+#include "mkn/kul/test.hpp"
 
 #include "bench.hpp"
+
+MKN_KUL_TEST_DECLARE();
 
 std::size_t constexpr static COUNT = 10000000;
 
@@ -24,8 +26,8 @@ void test_unaligned()
         b += a;
     }
 
-    mkn::kul::abort_if_not(v1.front() == 3);
-    mkn::kul::abort_if_not(v1.back() == 3);
+    MKN_KUL_TEST_CHECK(v1.front() == 3);
+    MKN_KUL_TEST_CHECK(v1.back() == 3);
 }
 
 } // namespace mkn::avx
