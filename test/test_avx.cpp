@@ -1,12 +1,16 @@
 
 #include "mkn/kul/log.hpp"
-#include "mkn/kul/assert.hpp"
+#include "mkn/kul/test.hpp"
 
 #include "mkn/avx.hpp"
 #include "mkn/avx/array.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <ranges>
+
+MKN_KUL_TEST_DECLARE();
 
 
 template<typename T>
@@ -15,14 +19,14 @@ void array()
     using Array_t = mkn::avx::Array<T, mkn::avx::Options::N<T>()>;
     Array_t a{1}, b{2};
 
-    mkn::kul::abort_if_not(a == 1);
-    mkn::kul::abort_if_not(b == 2);
+    MKN_KUL_TEST_CHECK(a == 1);
+    MKN_KUL_TEST_CHECK(b == 2);
 
     a += b;
-    mkn::kul::abort_if_not(a == 3);
+    MKN_KUL_TEST_CHECK(a == 3);
 
     a *= b;
-    mkn::kul::abort_if_not(a == 6);
+    MKN_KUL_TEST_CHECK(a == 6);
 
     auto const c = []() {
         Array_t t1{2};
@@ -31,13 +35,13 @@ void array()
     }();
 
     a *= c;
-    mkn::kul::abort_if_not(a == 18);
+    MKN_KUL_TEST_CHECK(a == 18);
 
     a -= b;
-    mkn::kul::abort_if_not(a == 16);
+    MKN_KUL_TEST_CHECK(a == 16);
 
     b = a;
-    mkn::kul::abort_if_not(b == 16);
+    MKN_KUL_TEST_CHECK(b == 16);
 }
 
 
@@ -55,11 +59,11 @@ void span()
 
     a += b;
     a *= b;
-    mkn::kul::abort_if_not(a == 15);
+    MKN_KUL_TEST_CHECK(a == 15);
 
     a /= b;
     a -= b;
-    mkn::kul::abort_if_not(a == 2);
+    MKN_KUL_TEST_CHECK(a == 2);
 }
 
 
@@ -80,8 +84,10 @@ void arr()
         a += 2;
         a *= b;
 
-        for (std::size_t i = 0; i < N; ++i)
-            mkn::kul::abort_if_not(v0[i] == ((i + 1) + 2) * (i + 2));
+        MKN_KUL_TEST_CHECK(
+            std::ranges::all_of(std::views::iota(std::size_t{0}, N),
+                                [&](auto const i) { return v0[i] == ((i + 1) + 2) * (i + 2); }),
+            "v0[i] == ((i + 1) + 2) * (i + 2)");
     }
 
     Vec v0(N * 10, 2);
@@ -91,7 +97,7 @@ void arr()
     std::fill(b.begin(), b.end(), 3);
 
     a *= b;
-    mkn::kul::abort_if_not(a == 6);
+    MKN_KUL_TEST_CHECK(a == 6);
 }
 
 
@@ -103,10 +109,10 @@ void fma()
     static_assert((SIZE % AVX::value_count) == 0, "Bad AVX value_count for vector");
 
     std::vector<AVX> a(SIZE / AVX::value_count, 1);
-    for (size_t i = 0; i < SIZE; i++)
-    {
-        mkn::kul::abort_if_not(a[0][i] == 1); // dangeresque
-    }
+    MKN_KUL_TEST_CHECK(
+        std::ranges::all_of(std::views::iota(std::size_t{0}, SIZE),
+                            [&](auto const i) { return a[0][i] == 1; }), // dangeresque
+        "a[0][i] == 1");
 
     a[1][0] = 2;
     a[2][0] = 3;
@@ -116,10 +122,10 @@ void fma()
     a[2][3] = 3;
 
     auto check = [](auto&& v) {
-        mkn::kul::abort_if_not(v[0] == (1 * 2) + 3);
-        mkn::kul::abort_if_not(v[1] == (1 * 1) + 1);
-        mkn::kul::abort_if_not(v[2] == (1 * 1) + 1);
-        mkn::kul::abort_if_not(v[3] == (2 * 2) + 3);
+        MKN_KUL_TEST_CHECK(v[0] == (1 * 2) + 3);
+        MKN_KUL_TEST_CHECK(v[1] == (1 * 1) + 1);
+        MKN_KUL_TEST_CHECK(v[2] == (1 * 1) + 1);
+        MKN_KUL_TEST_CHECK(v[3] == (2 * 2) + 3);
     };
 
     check(std::fma(a[0], a[1], a[2]));
